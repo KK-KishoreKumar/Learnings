@@ -14,7 +14,7 @@ clean:
 # kernel build system and can use its language.
 else
 
-	obj-m := snull.o pn.o
+	obj-m := snull.o pn.o rt8139.o
 	pn-y := pci_net.o phy.o mac.o net_stk.o
 
 endif
