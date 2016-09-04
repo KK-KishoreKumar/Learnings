@@ -1,0 +1,100 @@
+I intention is to understand the linux I2C framework. Below are the useful resources:
+
+Start with Free Electrons slides
+
+http://venkateshabbarapu.blogspot.in/2012/11/i2c-driver-in-linux.html
+
+http://opensourceforu.com/2015/01/writing-i2c-clients-in-linux/
+
+http://invo-tronics.com/i2c-driver-for-linux-based-embedded-system/ (Good Explaination)
+
+https://i2c.wiki.kernel.org/index.php/Driver_Architecture
+
+http://www.embeddedlinux.org.cn/essentiallinuxdevicedrivers/final/ch08lev1sec2.html
+
+http://rts.lab.asu.edu/web_438/CSE438_598_slides_yhlee/438_6_Linux_I2C_SMBus.pdf (Nice Explaination)
+
+http://www.ti.com/lit/an/sbaa170/sbaa170.pdf
+http://www.embedded-bits.co.uk/2009/i2c-in-the-2632-linux-kernel/ (Good Explaination)
+
+
+In a nutshell I2C is a simple serial bus that is often used to communicate with devices such as EEPROMs and peripherals such as touchscreens – there is also SMBus which can sometimes be considered a subset of I2C. The kernel breaks down I2C into ‘Buses’ and ‘Devices’, and then further breaks down buses into ‘Algorithms‘ and ‘Adapters‘, and devices into ‘Drivers‘ and ‘Clients‘. We’ll take a look at these in a little more detail.
+
+Algorithms
+
+An Algorithm performs the actual reading and writing of I2C messages to the hardware – this may involve bit banging GPIO lines or writing to an I2C controller chip. An Algorithm is represented by the very straight-foward ‘struct i2c_algorithm‘ structure and allows you to define function pointers to functions that can write I2C messages (master_xfer) or SMBus messages (smbus_xfer).
+
+Adapters
+
+An Adapter effectively represents a bus – it is used to tie up a particular I2C/SMBus with an algorithm and bus number. It is represented by the ‘struct i2c_adapter‘ structure. If you imagine a system where there are many I2C buses – perhaps two controlled by a controller chip and one bit-banged – then you would expect to see 3 instances of an i2c_adapter and 2 instances of an i2c_algorithm.
+
+Clients
+
+A Client represents a chip (slave) on the I2C/SMBus such as a Touchscreen peripheral and is represented by a ‘struct i2c_client‘ structure. This includes various members such as chip address, name and pointers to the adapter and driver.
+
+Drivers
+
+Finally a driver, represented by a ‘struct i2c_driver‘ structure represents the device driver for a particular class of I2C/SMBus slave devices, e.g. a touchscreen driver. The structure contains a bunch of function pointers – the ones of interest to us are the ‘probe’ and ‘remove’ pointers – which we’ll shortly come onto.
+
+So where do we start with writing an I2C slave device driver? We start by populating a ‘struct i2c_driver’ structure. In this tutorial we’ll populate just the ‘driver’, ‘id_table’, ‘probe’, and ‘remove’ members. We’ll also use the ‘migor_ts.c‘ touchscreen driver as reference code.
+1	static struct i2c_driver migor_ts_driver = {
+2	   .driver = {
+3	      .name = "migor_ts",
+4	   },
+5	   .probe = migor_ts_probe,
+6	   .remove = migor_ts_remove,
+7	   .id_table = migor_ts_id,
+8	};
+
+We tell the kernel about our I2C slave driver by registering the 'struct i2c_driver' structure with the I2C core - we do this with a call to 'i2c_add_driver' in our __init function as follows:
+
+1	static int __init migor_ts_init(void)
+2	{
+3	        return i2c_add_driver(&migor_ts_driver);
+4	}
+
+As described in an earlier post – the __init macro will ensure this function gets called upon kernel initialisation.
+
+Back to our ‘struct i2c_driver’ structure – the id_table member allows us to tell the framework which I2C slaves chips we support – id_table is simply an array of ‘struct i2c_device_id’ – here’s the migors:
+1	static struct i2c_device_id migor_ts_id[] = {
+2	{ "migor_ts", 0 },
+3	{ }
+4	};
+
+So in this case we’re saying that we only support a slave chip named ‘migor_ts’. This makes us wonder – how does the kernel know which slave chips are present and what they’re called? – we know the chip doesn’t contain such friendly naming strings and I2C doesn’t support enumeration. There is no magic – there are a number of mechanisms to discover and name an I2C slave – the most common in embedded devices is to define in your board set up file what slave devices you expect to see, their address and name. For example in the arch/sh/boards/mach-migor/setup.c file we see the following:
+1	static struct i2c_board_info migor_i2c_devices[] = {
+2	{
+3	I2C_BOARD_INFO("migor_ts", 0x51),
+4	.irq = 38, /* IRQ6 */
+5	},
+6	};
+7	 
+8	i2c_register_board_info(0, migor_i2c_devices, ARRAY_SIZE(migor_i2c_devices));
+
+Without going into too much detail here – we populate a ‘struct i2c_board_info’ structure with the help of a I2C_BOARD_INFO macro – crucially we include a made up name for the slave chip and it’s I2C bus address.
+
+So back to the migor driver. During boot, thanks to the ‘i2c_register_board_info’ call, the kernel will try to find any I2C driver which supports the ‘migor_ts’ name we provided. Upon finding such a driver, the kernel will call it’s ‘probe’ function. The idea being that the kernel believes it has found an I2C slave and would like us to probe to make sure that we are a suitable driver (It’s worth noting that the kernel won’t attempt to communicate with this device in any way).
+
+So if all is well – upon start up the kernel should call our probe function – let’s take a look.
+1	static int migor_ts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
+2	{
+3	...
+4	}
+
+Passed along as a parameter to the probe function is a ‘struct i2c_client’ structure – this represents our I2C slave chip. Typically a probe function where possible will communicate with the device to ensure it really is the device we think it is – this can be done by reading values from a revision ID register or the like. We can communicate with the slave by calling the ‘i2c_master_send’ function with a pointer to our ‘struct i2c_client’ – e.g:
+1	i2c_master_send(client, buf, 1);
+With regards to driver initialisation this is the last we’ll here from the kernel – so the probe function should also register with the input layer (assuming an input device) and perhaps set up an interrupt/timer. It’s also a good idea to make a note of the i2c_client for use later on. Now you can talk to your I2C slave device – what else goes on really depends on the type of device which is being supported.
+
+[© 2011 embedded-bits.co.uk]
+
+Framework in 2.6.20 kernel:
+
+1. We invoke the at91_add_i2c_device() in board-kb9202.c
+2. In at91rm9200_devices.c, we register platform_device with name at91_i2c. This is adapter device, which shares the info 
+   such as h/w registers, IRQs, with the platform driver. Apart from this, we set up the TWI interface by configuring the SCK and SDL interface.
+3. The corresponding platform_driver is placed at drivers/i2c/busses/i2c-at91.c.
+4. In the probe function of this driver, we request the memory with request_mem_region, do the ioremap of register base,
+   get the twi clock. 
+5. Next step is to allocate the adapter structure, tie it up with algorithm (at91_algorithm). Add an adapter to the driver
+data with platform_set_drvdata(pdev, adapter), enable the clock, initialize the i2c h/w and then finally add adapter to
+i2c framework with i2c_add_adapter.

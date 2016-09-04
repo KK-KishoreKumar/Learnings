@@ -1,0 +1,42 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+CLEAR	v4linux.c	23;"	d	file:
+IO_METHOD_MMAP	v4linux.c	/^	IO_METHOD_MMAP,$/;"	e	enum:io_method	file:
+IO_METHOD_READ	v4linux.c	/^	IO_METHOD_READ,$/;"	e	enum:io_method	file:
+IO_METHOD_USERPTR	v4linux.c	/^	IO_METHOD_USERPTR,$/;"	e	enum:io_method	file:
+V4L2_PIX_FMT_H264	v4linux.c	25;"	d	file:
+buffer	v4linux.c	/^struct buffer {$/;"	s	file:
+buffers	v4linux.c	/^struct buffer *buffers;$/;"	v	typeref:struct:buffer
+close_device	v4linux.c	/^static void close_device(void)$/;"	f	file:
+dev_name	v4linux.c	/^static char *dev_name;$/;"	v	file:
+errno_exit	v4linux.c	/^static void errno_exit(const char *s)$/;"	f	file:
+fd	v4linux.c	/^static int fd = -1;$/;"	v	file:
+force_format	v4linux.c	/^static int force_format;$/;"	v	file:
+frame_count	v4linux.c	/^static int frame_count = 200;$/;"	v	file:
+frame_number	v4linux.c	/^static int frame_number = 0;$/;"	v	file:
+init_device	v4linux.c	/^static void init_device(void)$/;"	f	file:
+init_mmap	v4linux.c	/^static void init_mmap(void)$/;"	f	file:
+init_read	v4linux.c	/^static void init_read(unsigned int buffer_size)$/;"	f	file:
+init_userp	v4linux.c	/^static void init_userp(unsigned int buffer_size)$/;"	f	file:
+io	v4linux.c	/^static enum io_method io = IO_METHOD_MMAP;$/;"	v	typeref:enum:io_method	file:
+io_method	v4linux.c	/^enum io_method {$/;"	g	file:
+length	v4linux.c	/^	size_t length;$/;"	m	struct:buffer	file:
+long_options	v4linux.c	/^long_options[] = {$/;"	v	typeref:struct:option	file:
+main	v4linux.c	/^int main(int argc, char **argv)$/;"	f
+mainloop	v4linux.c	/^static void mainloop(void)$/;"	f	file:
+n_buffers	v4linux.c	/^static unsigned int n_buffers;$/;"	v	file:
+open_device	v4linux.c	/^static void open_device(void)$/;"	f	file:
+out_buf	v4linux.c	/^static int out_buf;$/;"	v	file:
+process_image	v4linux.c	/^static void process_image(const void *p, int size)$/;"	f	file:
+read_frame	v4linux.c	/^static int read_frame(void)$/;"	f	file:
+short_options	v4linux.c	/^static const char short_options[] = "d:hmruofc:";$/;"	v	file:
+start	v4linux.c	/^	void *start;$/;"	m	struct:buffer	file:
+start_capturing	v4linux.c	/^static void start_capturing(void)$/;"	f	file:
+stop_capturing	v4linux.c	/^static void stop_capturing(void)$/;"	f	file:
+uninit_device	v4linux.c	/^static void uninit_device(void)$/;"	f	file:
+usage	v4linux.c	/^static void usage(FILE *fp, int argc, char **argv)$/;"	f	file:
+xioctl	v4linux.c	/^static int xioctl(int fh, int request, void *arg)$/;"	f	file:
