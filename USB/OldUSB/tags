@@ -1,0 +1,48 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ENABLE_FILE_OPS	uctl_usb.h	9;"	d
+ENABLE_PROCESS_EPS	uctl_usb.h	4;"	d
+EP_IN	uctl_usb.h	17;"	d
+EP_OUT	uctl_usb.h	16;"	d
+INTERFACE	uctl_usb.h	13;"	d
+KERNEL_SOURCE	Makefile	/^	KERNEL_SOURCE := \/usr\/src\/linux$/;"	m
+MAX_INTERFACES	uctl_usb.h	11;"	d
+MIN	uctl_usb.h	19;"	d
+PWD	Makefile	/^	PWD := $(shell pwd)$/;"	m
+TX_INTF	uctl_usb.h	14;"	d
+UCTL_PRODUCT_ID	uctl_usb.h	7;"	d
+UCTL_USB_H	uctl_usb.h	2;"	d
+UCTL_VENDOR_ID	uctl_usb.h	6;"	d
+attrib	uctl_usb.h	/^	int attrib[2];$/;"	m	struct:uctl_device
+buf	uctl_usb.h	/^	unsigned char *buf[2];$/;"	m	struct:uctl_device
+buf_left_over	uctl_usb.c	/^static int buf_left_over[MAX_INTERFACES][2];$/;"	v	file:
+buf_size	uctl_usb.h	/^	int buf_size[2];$/;"	m	struct:uctl_device
+device	uctl_usb.h	/^	struct usb_device *device;$/;"	m	struct:uctl_device	typeref:struct:uctl_device::usb_device
+ep	uctl_usb.h	/^	int ep[2];$/;"	m	struct:uctl_device
+fops	uctl_usb.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+is_active	uctl_usb.c	/^static int is_active[MAX_INTERFACES];$/;"	v	file:
+obj-m	Makefile	/^	obj-m := $(src-m:.c=.o)$/;"	m
+src-m	Makefile	/^	src-m := $(filter-out ${src-mod}, ${src-m})$/;"	m
+src-m	Makefile	/^	src-m := $(notdir ${src-m})$/;"	m
+src-m	Makefile	/^	src-m := $(wildcard ${SUBDIRS}\/*.c)$/;"	m
+src-mod	Makefile	/^	src-mod := $(notdir ${src-mod})$/;"	m
+src-mod	Makefile	/^	src-mod := $(wildcard ${SUBDIRS}\/*.mod.c)$/;"	m
+uctl_close	uctl_usb.c	/^int uctl_close(struct inode *i, struct file *f)$/;"	f
+uctl_dev	uctl_usb.c	/^static struct uctl_device uctl_dev[MAX_INTERFACES];$/;"	v	typeref:struct:uctl_device	file:
+uctl_device	uctl_usb.h	/^struct uctl_device$/;"	s
+uctl_disconnect	uctl_usb.c	/^void uctl_disconnect(struct usb_interface *interface)$/;"	f
+uctl_driver	uctl_usb.c	/^static struct usb_driver uctl_driver =$/;"	v	typeref:struct:usb_driver	file:
+uctl_exit	uctl_usb.c	/^module_exit(uctl_exit);$/;"	v
+uctl_exit	uctl_usb.c	/^static void __exit uctl_exit(void)$/;"	f	file:
+uctl_init	uctl_usb.c	/^module_init(uctl_init);$/;"	v
+uctl_init	uctl_usb.c	/^static int __init uctl_init(void)$/;"	f	file:
+uctl_open	uctl_usb.c	/^int uctl_open(struct inode *i, struct file *f)$/;"	f
+uctl_probe	uctl_usb.c	/^int uctl_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f
+uctl_read	uctl_usb.c	/^ssize_t uctl_read(struct file *f, char __user *buf, size_t cnt, loff_t *off)$/;"	f
+uctl_table	uctl_usb.c	/^static struct usb_device_id uctl_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+uctl_uninit	uctl_usb.c	/^static void uctl_uninit(struct usb_interface *interface)$/;"	f	file:
+uctl_write	uctl_usb.c	/^ssize_t uctl_write(struct file *f, const char __user *buf, size_t cnt, loff_t *off)$/;"	f

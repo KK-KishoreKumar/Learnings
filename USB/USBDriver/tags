@@ -1,0 +1,173 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ACQUIRE_SINGLE_INTERFACE	ddk.h	29;"	d
+CUSTOM_RQ_GET_LED_STATUS	ddk.h	11;"	d
+CUSTOM_RQ_GET_MEM_RD_OFFSET	ddk.h	13;"	d
+CUSTOM_RQ_GET_MEM_SIZE	ddk.h	16;"	d
+CUSTOM_RQ_GET_MEM_TYPE	ddk.h	18;"	d
+CUSTOM_RQ_GET_MEM_WR_OFFSET	ddk.h	15;"	d
+CUSTOM_RQ_GET_REGISTER	ddk.h	20;"	d
+CUSTOM_RQ_SET_LED_STATUS	ddk.h	10;"	d
+CUSTOM_RQ_SET_MEM_RD_OFFSET	ddk.h	12;"	d
+CUSTOM_RQ_SET_MEM_TYPE	ddk.h	17;"	d
+CUSTOM_RQ_SET_MEM_WR_OFFSET	ddk.h	14;"	d
+CUSTOM_RQ_SET_REGISTER	ddk.h	19;"	d
+DDK_H	ddk.h	2;"	d
+DDK_IO_H	ddk_io.h	2;"	d
+DDK_LED_GET	ddk_led.h	6;"	d
+DDK_LED_H	ddk_led.h	2;"	d
+DDK_LED_SET	ddk_led.h	7;"	d
+DDK_MEM_H	ddk_mem.h	2;"	d
+DDK_MEM_SIZE_GET	ddk_mem.h	10;"	d
+DDK_PRODUCT_ID	ddk.h	8;"	d
+DDK_RD_OFF_GET	ddk_mem.h	6;"	d
+DDK_RD_OFF_SET	ddk_mem.h	7;"	d
+DDK_REG_GET	ddk_io.h	6;"	d
+DDK_REG_SET	ddk_io.h	7;"	d
+DDK_VENDOR_ID	ddk.h	7;"	d
+DDK_WR_OFF_GET	ddk_mem.h	8;"	d
+DDK_WR_OFF_SET	ddk_mem.h	9;"	d
+FIRST_MINOR	usb_char_driver.c	15;"	d	file:
+MAX_ENDPOINTS	ddk.h	22;"	d
+MEM_EP_IN	ddk.h	24;"	d
+MEM_EP_OUT	ddk.h	25;"	d
+MIN	ddk_mem.c	15;"	d	file:
+MIN	ddk_u2s.c	12;"	d	file:
+MINOR_CNT	usb_char_driver.c	16;"	d	file:
+RegId	ddk_io.h	/^} RegId;$/;"	t	typeref:enum:__anon1
+Register	ddk_io.h	/^} Register;$/;"	t	typeref:struct:__anon2
+SER_EP_IN	ddk.h	26;"	d
+SER_EP_OUT	ddk.h	27;"	d
+c_dev	usb_char_driver.c	/^static struct cdev c_dev;$/;"	v	typeref:struct:cdev	file:
+char_deregister_dev	usb_char_driver.c	/^static void char_deregister_dev(struct usb_interface *interface, struct usb_class_driver *ucd)$/;"	f	file:
+char_register_dev	usb_char_driver.c	/^static int char_register_dev(struct usb_interface *interface, struct usb_class_driver *ucd)$/;"	f	file:
+cl	usb_char_driver.c	/^static struct class *cl;$/;"	v	typeref:struct:class	file:
+ddk_close	ddk_io.c	/^static int ddk_close(struct inode *i, struct file *f)$/;"	f	file:
+ddk_close	ddk_led.c	/^static int ddk_close(struct inode *i, struct file *f)$/;"	f	file:
+ddk_close	ddk_mem.c	/^static int ddk_close(struct inode *i, struct file *f)$/;"	f	file:
+ddk_close	ddk_u2s.c	/^static int ddk_close(struct inode *i, struct file *f)$/;"	f	file:
+ddk_close	usb_char_driver.c	/^static int ddk_close(struct inode *i, struct file *f)$/;"	f	file:
+ddk_dev	ddk_io.c	/^static struct ddk_device ddk_dev; \/\/ Need to be persistent$/;"	v	typeref:struct:ddk_device	file:
+ddk_dev	ddk_led.c	/^} ddk_dev; \/\/ Need to be persistent$/;"	v	typeref:struct:ddk_device	file:
+ddk_device	ddk_io.c	/^struct ddk_device$/;"	s	file:
+ddk_device	ddk_led.c	/^static struct ddk_device$/;"	s	file:
+ddk_device	ddk_mem.c	/^struct ddk_device$/;"	s	file:
+ddk_device	ddk_u2s.c	/^struct ddk_device$/;"	s	file:
+ddk_device_file	ddk_mem.c	/^struct ddk_device_file$/;"	s	file:
+ddk_disconnect	ddk_io.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_disconnect	ddk_led.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_disconnect	ddk_mem.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_disconnect	ddk_u2s.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_disconnect	first_usb_driver.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_disconnect	usb_char_driver.c	/^static void ddk_disconnect(struct usb_interface *interface)$/;"	f	file:
+ddk_driver	ddk_io.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	ddk_led.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	ddk_mem.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	ddk_mem.c	/^static struct usb_driver ddk_driver;$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	ddk_u2s.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	ddk_u2s.c	/^static struct usb_driver ddk_driver;$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	first_usb_driver.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_driver	usb_char_driver.c	/^static struct usb_driver ddk_driver =$/;"	v	typeref:struct:usb_driver	file:
+ddk_exit	ddk_io.c	/^module_exit(ddk_exit);$/;"	v
+ddk_exit	ddk_io.c	/^static void __exit ddk_exit(void)$/;"	f	file:
+ddk_exit	ddk_led.c	/^module_exit(ddk_exit);$/;"	v
+ddk_exit	ddk_led.c	/^static void __exit ddk_exit(void)$/;"	f	file:
+ddk_exit	ddk_mem.c	/^module_exit(ddk_exit);$/;"	v
+ddk_exit	ddk_mem.c	/^static void __exit ddk_exit(void)$/;"	f	file:
+ddk_exit	ddk_u2s.c	/^module_exit(ddk_exit);$/;"	v
+ddk_exit	ddk_u2s.c	/^static void __exit ddk_exit(void)$/;"	f	file:
+ddk_exit	usb_char_driver.c	/^module_exit(ddk_exit);$/;"	v
+ddk_exit	usb_char_driver.c	/^static void __exit ddk_exit(void)$/;"	f	file:
+ddk_fops	usb_char_driver.c	/^static struct file_operations ddk_fops =$/;"	v	typeref:struct:file_operations	file:
+ddk_fud_exit	first_usb_driver.c	/^module_exit(ddk_fud_exit);$/;"	v
+ddk_fud_exit	first_usb_driver.c	/^static void __exit ddk_fud_exit(void)$/;"	f	file:
+ddk_fud_init	first_usb_driver.c	/^module_init(ddk_fud_init);$/;"	v
+ddk_fud_init	first_usb_driver.c	/^static int __init ddk_fud_init(void)$/;"	f	file:
+ddk_init	ddk_io.c	/^module_init(ddk_init);$/;"	v
+ddk_init	ddk_io.c	/^static int __init ddk_init(void)$/;"	f	file:
+ddk_init	ddk_led.c	/^module_init(ddk_init);$/;"	v
+ddk_init	ddk_led.c	/^static int __init ddk_init(void)$/;"	f	file:
+ddk_init	ddk_mem.c	/^module_init(ddk_init);$/;"	v
+ddk_init	ddk_mem.c	/^static int __init ddk_init(void)$/;"	f	file:
+ddk_init	ddk_u2s.c	/^module_init(ddk_init);$/;"	v
+ddk_init	ddk_u2s.c	/^static int __init ddk_init(void)$/;"	f	file:
+ddk_init	usb_char_driver.c	/^module_init(ddk_init);$/;"	v
+ddk_init	usb_char_driver.c	/^static int __init ddk_init(void)$/;"	f	file:
+ddk_ioctl	ddk_io.c	/^static int ddk_ioctl(struct inode *i, struct file *f, unsigned int cmd, unsigned long arg)$/;"	f	file:
+ddk_ioctl	ddk_led.c	/^static int ddk_ioctl(struct inode *i, struct file *f, unsigned int cmd, unsigned long arg)$/;"	f	file:
+ddk_ioctl	ddk_mem.c	/^static int ddk_ioctl(struct inode *i, struct file *f, unsigned int cmd, unsigned long arg)$/;"	f	file:
+ddk_llseek	ddk_mem.c	/^static loff_t ddk_llseek(struct file *f, loff_t offset, int whence)$/;"	f	file:
+ddk_open	ddk_io.c	/^static int ddk_open(struct inode *i, struct file *f)$/;"	f	file:
+ddk_open	ddk_led.c	/^static int ddk_open(struct inode *i, struct file *f)$/;"	f	file:
+ddk_open	ddk_mem.c	/^static int ddk_open(struct inode *i, struct file *f)$/;"	f	file:
+ddk_open	ddk_u2s.c	/^static int ddk_open(struct inode *i, struct file *f)$/;"	f	file:
+ddk_open	usb_char_driver.c	/^static int ddk_open(struct inode *i, struct file *f)$/;"	f	file:
+ddk_probe	ddk_io.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_probe	ddk_led.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_probe	ddk_mem.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_probe	ddk_u2s.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_probe	first_usb_driver.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_probe	usb_char_driver.c	/^static int ddk_probe(struct usb_interface *interface, const struct usb_device_id *id)$/;"	f	file:
+ddk_read	ddk_mem.c	/^static ssize_t ddk_read(struct file *f, char __user *buf, size_t cnt, loff_t *off)$/;"	f	file:
+ddk_read	ddk_u2s.c	/^static ssize_t ddk_read(struct file *f, char __user *buf, size_t cnt, loff_t *off)$/;"	f	file:
+ddk_table	ddk_io.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_table	ddk_led.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_table	ddk_mem.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_table	ddk_u2s.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_table	first_usb_driver.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_table	usb_char_driver.c	/^static struct usb_device_id ddk_table[] =$/;"	v	typeref:struct:usb_device_id	file:
+ddk_write	ddk_mem.c	/^static ssize_t ddk_write(struct file *f, const char __user *buf, size_t cnt, loff_t *off)$/;"	f	file:
+ddk_write	ddk_u2s.c	/^static ssize_t ddk_write(struct file *f, const char __user *buf, size_t cnt, loff_t *off)$/;"	f	file:
+dev	ddk_mem.c	/^	struct ddk_device *dev;$/;"	m	struct:ddk_device_file	typeref:struct:ddk_device_file::ddk_device	file:
+dev	usb_char_driver.c	/^static dev_t dev;$/;"	v	file:
+device	ddk_io.c	/^	struct usb_device *device;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_device	file:
+device	ddk_led.c	/^	struct usb_device *device;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_device	file:
+device	ddk_mem.c	/^	struct usb_device *device;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_device	file:
+device	ddk_u2s.c	/^	struct usb_device *device;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_device	file:
+dira	ddk_io.h	/^	dira,$/;"	e	enum:__anon1
+dirb	ddk_io.h	/^	dirb,$/;"	e	enum:__anon1
+dirc	ddk_io.h	/^	dirc,$/;"	e	enum:__anon1
+dird	ddk_io.h	/^	dird,$/;"	e	enum:__anon1
+e_read	ddk_mem.c	/^	e_read,$/;"	e	enum:__anon3	file:
+e_write	ddk_mem.c	/^	e_write$/;"	e	enum:__anon3	file:
+fops	ddk_io.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+fops	ddk_led.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+fops	ddk_mem.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+fops	ddk_u2s.c	/^static struct file_operations fops =$/;"	v	typeref:struct:file_operations	file:
+get_off	ddk_mem.c	/^static int get_off(struct ddk_device *dev, int dir)$/;"	f	file:
+get_size	ddk_mem.c	/^static int get_size(struct ddk_device *dev)$/;"	f	file:
+id	ddk_io.h	/^	RegId id;$/;"	m	struct:__anon2
+in_buf	ddk_mem.c	/^	unsigned char *in_buf, *out_buf;$/;"	m	struct:ddk_device_file	file:
+in_buf	ddk_u2s.c	/^	unsigned char *in_buf, *out_buf;$/;"	m	struct:ddk_device	file:
+in_buf_left_over	ddk_mem.c	/^	int in_buf_left_over;$/;"	m	struct:ddk_device_file	file:
+in_buf_left_over	ddk_u2s.c	/^	int in_buf_left_over;$/;"	m	struct:ddk_device	file:
+in_buf_size	ddk_mem.c	/^	int in_buf_size, out_buf_size;$/;"	m	struct:ddk_device	file:
+in_buf_size	ddk_u2s.c	/^	int in_buf_size, out_buf_size;$/;"	m	struct:ddk_device	file:
+in_ep	ddk_mem.c	/^	int in_ep, out_ep;$/;"	m	struct:ddk_device	file:
+in_ep	ddk_u2s.c	/^	int in_ep, out_ep;$/;"	m	struct:ddk_device	file:
+m	ddk_mem.c	/^	struct mutex m;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::mutex	file:
+m	ddk_u2s.c	/^	struct mutex m;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::mutex	file:
+open_cnt	ddk_mem.c	/^	atomic_t open_cnt;$/;"	m	struct:ddk_device	file:
+out_buf	ddk_mem.c	/^	unsigned char *in_buf, *out_buf;$/;"	m	struct:ddk_device_file	file:
+out_buf	ddk_u2s.c	/^	unsigned char *in_buf, *out_buf;$/;"	m	struct:ddk_device	file:
+out_buf_size	ddk_mem.c	/^	int in_buf_size, out_buf_size;$/;"	m	struct:ddk_device	file:
+out_buf_size	ddk_u2s.c	/^	int in_buf_size, out_buf_size;$/;"	m	struct:ddk_device	file:
+out_ep	ddk_mem.c	/^	int in_ep, out_ep;$/;"	m	struct:ddk_device	file:
+out_ep	ddk_u2s.c	/^	int in_ep, out_ep;$/;"	m	struct:ddk_device	file:
+porta	ddk_io.h	/^	porta,$/;"	e	enum:__anon1
+portb	ddk_io.h	/^	portb,$/;"	e	enum:__anon1
+portc	ddk_io.h	/^	portc,$/;"	e	enum:__anon1
+portd	ddk_io.h	/^	portd,$/;"	e	enum:__anon1
+rsvd	ddk_io.h	/^	rsvd,$/;"	e	enum:__anon1
+set_off	ddk_mem.c	/^static int set_off(struct ddk_device *dev, int dir, int offset)$/;"	f	file:
+total_reg_id	ddk_io.h	/^	total_reg_id$/;"	e	enum:__anon1
+ucd	ddk_io.c	/^	struct usb_class_driver ucd;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_class_driver	file:
+ucd	ddk_led.c	/^	struct usb_class_driver ucd;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_class_driver	file:
+ucd	ddk_mem.c	/^	struct usb_class_driver ucd;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_class_driver	file:
+ucd	ddk_u2s.c	/^	struct usb_class_driver ucd;$/;"	m	struct:ddk_device	typeref:struct:ddk_device::usb_class_driver	file:
+ucd	usb_char_driver.c	/^static struct usb_class_driver ucd;$/;"	v	typeref:struct:usb_class_driver	file:
+val	ddk_io.h	/^	unsigned char val;$/;"	m	struct:__anon2
