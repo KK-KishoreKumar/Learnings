@@ -1,0 +1,12 @@
+
+[19277.429278] smsc95xx 1-2.1:1.0: usb_probe_interface
+[19277.429505] smsc95xx 1-2.1:1.0: usb_probe_interface - got id
+[19277.429628] smsc95xx v1.0.4
+[19277.447487] SMSC Reset Called
+[19277.492268] SMSC Reset: Set mac address calling
+[19277.503570] SMSC Reset: Invoking Multicast
+[19277.507886] SMSC: Multicast called
+[19277.511931] SMSC: Set multicast, else called
+[19277.516438] smsc95xx 1-2.1:1.0: (unregistered net_device): receive own packets only
+[19277.563697] smsc95xx 1-2.1:1.0: eth0: register 'smsc95xx' at usb-ehci-omap.0-2.1, smsc95xx USB 2.0 Ethernet, c2:5c:cf:0f:76:e2
+[19277.603442] usbcore: registered new interface driver smsc95xx

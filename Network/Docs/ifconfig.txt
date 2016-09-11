@@ -1,0 +1,35 @@
+[19313.396822] SMSC Reset Called
+[19313.432281] SMSC Reset: Set mac address calling
+[19313.443196] SMSC Reset: Invoking Multicast
+[19313.447504] SMSC: Multicast called
+[19313.451188] SMSC: Set multicast, else called
+[19313.455690] smsc95xx 1-2.1:1.0: eth0: receive own packets only
+[19313.480910] UsbNet Open: in Interrupt
+[19313.484874] usb 1-2.1: link qh8-0001/dda3a8e0 start 7 [1/0 us]
+[19313.484912] Usbnet Open: Scheduling Tasklet
+[19313.489327] SMSC: Multicast called
+[19313.492990] SMSC: Set multicast, else called
+[19313.497487] smsc95xx 1-2.1:1.0: eth0: receive own packets only
+[19313.498121] rx submit called from usb_bh
+[19313.502147] rx submit called Up
+[19313.505673] rx submit called from usb_bh
+[19313.509800] rx submit called Up
+[19313.513216] rx submit called from usb_bh
+[19313.517340] rx submit called Up
+[19313.520692] rx submit called from usb_bh
+[19313.524865] rx submit called Up
+[19313.528237] smsc95xx 1-2.1:1.0: eth0: rxqlen 0 --> 4
+[19313.528648] SMSC: Multicast called
+[19313.532278] SMSC: Set multicast, else called
+[19313.536763] smsc95xx 1-2.1:1.0: eth0: receive own packets only
+[19313.537071] SMSC: Multicast called
+[19313.540647] SMSC: Set multicast, else if
+[19313.544776] smsc95xx 1-2.1:1.0: eth0: HASHH=0x00000000, HASHL=0x80000000
+[19315.024617] SMSC: smsc status called
+[19315.028410] smsc95xx 1-2.1:1.0: eth0: intdata: 0x00008000
+[19315.028427] SMSC: smsc status calling kevent
+[19315.032943] smsc95xx 1-2.1:1.0: eth0: kevent 4 scheduled
+[19315.042066] smsc95xx 1-2.1:1.0: eth0: link up, 100Mbps, full-duplex, lpa 0x45E1
+[19315.058544] smsc95xx 1-2.1:1.0: eth0: speed: 100 duplex: 1 lcladv: 0de1 rmtadv: 45e1
+[19315.059320] smsc95xx 1-2.1:1.0: eth0: rx pause enabled, tx pause enabled
+[19315.060049] smsc95xx 1-2.1:1.0: eth0: kevent done, flags = 0x100
