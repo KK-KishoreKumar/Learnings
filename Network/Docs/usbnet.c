@@ -405,6 +405,8 @@ static inline void rx_process (struct usbnet *dev, struct sk_buff *skb)
 		if (dev->driver_info->flags & FLAG_MULTI_PACKET)
 			dev_kfree_skb_any(skb);
 		else
+		{
+			printk("usbnet_skb_return called from rx_process");
 			usbnet_skb_return(dev, skb);
 		return;
 	}
@@ -511,6 +513,7 @@ static void intr_complete (struct urb *urb)
 	switch (status) {
 	/* success */
 	case 0:
+		printk("In Intr, case 0");
 		dev->driver_info->status(dev, urb);
 		break;
 
@@ -556,6 +559,7 @@ void usbnet_resume_rx(struct usbnet *dev)
 	clear_bit(EVENT_RX_PAUSED, &dev->flags);
 
 	while ((skb = skb_dequeue(&dev->rxq_pause)) != NULL) {
+		printk("usbnet_skb_return called from resume_rx");
 		usbnet_skb_return(dev, skb);
 		num++;
 	}
