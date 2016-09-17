@@ -1,0 +1,45 @@
+[  294.705400] rx complete called up
+[  294.708733] rx submit called from rx complete
+[  294.713316] rx submit called UpTasklet called
+[  294.718347] Tasklet: In Dequeue
+[  294.721651] Tasklet: TX done/rx cleanup
+[  294.725728] Tasklet: In Dequeue
+[  294.729031] Tasklet: Calling RX Process
+[  294.733096] RX fixup called
+[  294.736027] Else part of RX fixup
+[  294.739504] RX fixup : last part
+[  294.744260] Tasklet called
+[  294.747121] Tasklet: In Dequeue
+[  294.750414] Tasklet: TX done/rx cleanup
+[  294.809997] rx complete called up
+[  294.813316] rx submit called from rx complete
+[  294.817885] rx submit called UpTasklet called
+[  294.822855] Tasklet: In Dequeue
+[  294.826152] Tasklet: Calling RX Process
+[  294.830175] RX fixup called
+[  294.833106] Else part of RX fixup
+[  294.836579] RX fixup : last part
+[  294.841766] rx complete called up
+[  294.845083] rx submit called from rx complete
+[  294.849659] rx submit called UpTasklet called
+[  294.854592] Tasklet: In Dequeue
+[  294.857888] Tasklet: TX done/rx cleanup
+[  294.861926] Tasklet: In Dequeue
+[  294.865225] Tasklet: Calling RX Process
+[  294.869248] RX fixup called
+[  294.872178] Else part of RX fixup
+[  294.875655] RX fixup : last part
+[  294.879608] Tasklet called
+[  294.882540] Tasklet: In Dequeue
+[  294.885836] Tasklet: TX done/rx cleanup
+[  299.816504] rx complete called up
+[  299.819832] rx submit called from rx complete
+[  299.824407] rx submit called UpTasklet called
+[  299.829342] Tasklet: In Dequeue
+[  299.832640] Tasklet: Calling RX Process
+[  299.836663] RX fixup called
+[  299.839594] Else part of RX fixup
+[  299.843070] RX fixup : last part
+[  299.846942] Tasklet called
+[  299.849790] Tasklet: In Dequeue
+[  299.853088] Tasklet: TX done/rx cleanup

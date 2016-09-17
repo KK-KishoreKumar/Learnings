@@ -1,0 +1,10 @@
+[  550.703624] In Intr Complete
+[  550.706673] Calling the status
+[  550.709877] SMSC: smsc status called
+[  550.713652] smsc95xx 1-2.1:1.0: eth0: intdata: 0x00008000
+[  550.713670] SMSC: smsc status calling kevent
+[  550.718189] smsc95xx 1-2.1:1.0: eth0: kevent 4 scheduled
+[  550.726071] smsc95xx 1-2.1:1.0: eth0: link up, 100Mbps, full-duplex, lpa 0x45E1
+[  550.742818] smsc95xx 1-2.1:1.0: eth0: speed: 100 duplex: 1 lcladv: 0de1 rmtadv: 45e1
+[  550.743563] smsc95xx 1-2.1:1.0: eth0: rx pause enabled, tx pause enabled
+[  550.744304] smsc95xx 1-2.1:1.0: eth0: kevent done, flags = 0x100
