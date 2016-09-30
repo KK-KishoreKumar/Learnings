@@ -1,0 +1,343 @@
+kernel is located at C0000, how gdb gets the address from the vmlinuz?
+what is bug on?
+what is the size of kernel? what is bzimage and vmlinux
+What's valgrind
+If RAM is very small, will kernel take away all the RAM?
+Kernel release versions. how are they maintained.
+hw and sw  breakpoint
+
+To debug the kernel, its recommended to configure the kdump alone with sysreq key
+watch dog timer
+Crash in instantaneous in nature and is different from hang
+ + Oops message will be displayed on the screen
+ + Happens due to h/w error, defect in the program, unsupported operations
+ + Even after the oops messages the system can continue to run with some degraded performance.
+ kerneloops.org
+ Kernel Bug: Soft Lockup - CPU0 stuck for 10s
+  + kernel subsystem not being given a chance to perform its task for X number of seconds
+  + Bug due to which kernel loops for more than X number of seconds
+  + sysctl -algrep -i softlock
+    kernel.softlockup_panic = 0 (generates a crash dump)
+	sysctl -algrep -i watchdog
+	kernel.watchdog_thresh = 60
+	
+  + sysctl -a | grep hung
+  echo 0 > /proc/sys/kernel/hung_task_timeout_secs
+http://lse.sourceforge.net/kdump/documentation/ols2oo5-kdump-paper.pdf	
+https://lwn.net/Articles/365835/
+http://opensourceforu.com/2010/12/kernel-tracing-with-ftrace-part-2/
+http://opensourceforu.com/2010/10/debugging-linux-kernel-with-debugfs/
+http://opensourceforu.com/2011/02/debug-kernel-panics-with-crash/
+http://opensourceforu.com/2010/09/systemtap-tutorial-part-1/
+http://opensourceforu.com/2010/10/systemtap-tutorial-part-2/
+http://opensourceforu.com/2011/12/getting-started-with-systemtap/
+http://opensourceforu.com/2016/07/boost-system-performance-linux-kernel-recompilationoptimisation/
+http://elinux.org/Ftrace
+https://events.linuxfoundation.org/slides/2010/linuxcon_japan/linuxcon_jp2010_rostedt.pdf
+https://lwn.net/Articles/366796/
+http://opensourceforu.com/2011/02/debug-kernel-panics-with-crash/
+http://opensourceforu.com/2015/10/the-xenomai-project-a-linux-based-rtos/
+http://opensourceforu.com/2009/01/the-crux-of-linux-notifier-chains/ (Notifier mechanisms in kernel)
+http://www.thegeekstuff.com/2014/05/kdump/
+http://neependra.net/kernel/Debugging_Kernel_OOPs_FUDCon2011.pdf
+http://opensourceforu.com/2011/04/kernel-debugging-using-kprobe-and-jprobe/
+http://opensourceforu.com/2015/04/the-link-project-for-linux-kernel-developers/
+http://opensourceforu.com/2010/09/user-mode-linux-setup-and-debug/
+http://opensourceforu.com/2011/10/gnu-binutils-collection-of-binary-tools/ (Bin Utils)
+https://wiki.ubuntu.com/Kernel/KernelDebuggingTricks
+http://www.ibm.com/developerworks/linux/library/l-kernel-logging-apis/index.html (Framework of kernel printk)
+_
+Dynamic debug messages
+https://lwn.net/Articles/434833/
+https://lwn.net/Articles/434856/
+https://www.kernel.org/doc/Documentation/dynamic-debug-howto.txt
+https://blackfin.uclinux.org/doku.php?id=linux-kernel:debug:early_printk (Nice article for early debug)
+https://kernelnewbies.org/Linux_Kernel_Tester%27s_Guide_Chapter3
+
+Debugging when the kernel hangs even before giving out the messages (IMP)
+http://elinux.org/Debugging_by_printing#Debugging_early_boot_problems
+
+	
+ps aux | grep -i hung
+there is a thread called khungtaskd thread which identifies the uninterruptible task which is being hung for more than 120S
+
+Hw level errors on kernel side
+Machine check Exception - CPU reports error detected by the CPU as Machine check event
+Looks like as below:
+ + Kernel : Machine check events logged
+ Almost always a hw problem, updating BIOS  in some cases may resolve false MCE
+ mcelog - decodes and prints in /var/log/mcelogs
+ 
+ OOM (out of memory)
+ Interrupt Handling (irqbalancing)
+ 
+ 
+ youtube videos
+ https://www.youtube.com/watch?v=V5b4VtHu4hw
+ 
+ Kdump
+ -----
+ For application crash, you have application core, similarly for kernel crash, you have vm core, virtual memory core
+  + its just the dump of whatever be the memory content at the time of crash. We will dump it in non-volatile memory and 
+    analyse it with 
+	supports both network and disk back dump
+	kdump is a reliable mechanism for dumping vmcore from crashed kernel 
+	uses kexec mechanism
+	kexec allows kdump to reserves some amount of memory very early during boot process
+	This reserved memory is used to load the kdump kernel into it. Early allocation ensures that the memory is contigious.
+	Memory for New initrd build along with this kdump is also reserved and additional heap for secondary kdump kernel
+	uses a secondary kdump kernel when the kernel crashes. Crash dump is treated with this freshly booted kdump kernel
+	it avoids going through the bios stage, so that the crashed kernel memory is preserved
+	This is the advantage of kexec mechanism. Its also being used by the kernel developers to fastly test some feature
+	So, kexec is a kind of fast booting mechanism. we need to install the kexec_tool utility
+	
+	Sequence of events
+	Let say system panic
+	instead of printing the backtrace message, it checks whether kdump is being configured in your system
+	the portion of memory which is being reserved is unlocked. Then, it halts the other cpu
+	Then it jumps to the new kernel and after collecting the vmcore, starts booting with the same kernel, 
+	vmcore is by default dumped into /etc/kdump.core
+	
+	Install the kexec-tools
+	Next thing is you have to specify the parameter crashkernel=128M for reserving the memory in u-boot
+	Next thing, there is a guideline - 
+	0 - 2GB ram, crash kernel size is 128M
+	2GB-6GB, crash kernel is 256M
+	cat /proc/cmdline gives you the parameter being set
+	The configuration file for kdump is /etc/kdump.conf
+	  Two important things
+	   + The location of vmcore with path - /var/crash
+	     you can dump it on the local disk, you can dump it on raw partition
+	   + you can dump it on ssh, you can dump it on nfs partition
+	  Another important part is to save the space, you can reduce the size of vmcore
+	     core_collector makedumpfile -c  --message-level -c 
+		 Then restart the kdump service and make sure that it is on
+		 Test it before running. echo c < /proc/sysrq-trigger
+		 
+	Analyzing the kernel crash
+	+ For this, we have a utility called crash. Its a kernel aware utility implemented as superset of gdb
+	+ used to investigate a variety of core dump
+	+ crash <vmlinux> <vmcore>
+	+ For live memory image, you can also use the /dev/crash or via vmcore
+	+ need to use the vmlinux because its is uncompressed and contains all the debugging symbols
+	+ kernel-debuginfo and vmlinux
+	Crash for live debugging
+	+ crash vmlinux /var/crash/vmcore gives the following info
+	  + uptime, no. of cpus, memory, panic - oops, pid of the offending process, command, task - address in the memory of the offending process
+	 OOPS: 0002[#1]SMP
+	 0010 (Binary)
+	 ---------------------------------
+	 Value 0               1
+	 0   No Page found     Invalid Access
+	 1   Read/Execute      write
+	 2   Kernel Mode       User Mode
+	 3   Not Instruction   Instruction fele
+	     fetch
+		 
+	you can run all the commands such as ps. another command is bt for backtracing
+	swapper is basically the scheduler function. There is one swapper per cpu
+	main thing to see is the exception, sysrq_handle. RIP is the instruction pointer
+	Another command is log is the dump of the kernel buffer
+	kmem -i (memory info at the time of crash), sys, mount command, net for network statistics
+	
+	Linux Kernel Crash analysis
+	--------------------------
+	Its like the post mortem of the crashed application. Core dump which is the dump of virtual memory of that process.
+	If i have the access to the virtual memory of the process, I have the access to the environment of the process at the time of crash.
+	
+	How to debug?
+	Stare at the code?
+	Printk
+	gdb
+	System Tap - 
+	Attach the gdb to the live kernel is complicated.
+	Same as you think to debug the Application, it applies to the kernel, but there are some restrictions.
+	What is the kernel crash?
+	 + Warnings in dmesg. something is happening in the kernel space. messages being put into the kernel buffer
+	   - This won't cause the problems with kernel itself, but on the system side. For example, less disk space
+	 + Kernel OOPS - are something specific to the kernel space. Types of problems in the kernel which we don't want to see. These are 
+	   specific sets of problems which kernel might encounter which might cause the future problems if the kernel continues to run. Kernel may
+	   warn you about the oops. This is the disclaimer that I am not stable, use me at your own risk. probably reboot.This may lead to kernel panic
+	 + Kernel BUGS - These are the BUGs which software developers anticipated.These are the situations which the developer thinks could happen, but should never happen.
+	 It can cause the kernel crash
+	 + Kernel Panic: It's the stage when system is completely down and is unoperable. Kernel is still running, but in coma. Its in memory, but not running. Before it breathes out last
+	 it wants to print something on the console. It contains what was the process that caused the panic. What was the state of CPU registers when it panicked. The call trace of the functions.
+	    + First line is say: Null pointer deference
+		+ Second thing is the modules linked in. 
+		+ HW registers of the system
+		+ Call trace of the functions
+	This doesn't provides us the more information. So, we kdump, using which we can prepare our system for more information at the moment of panic.
+	It has one goal in mind. To generate the vmcore, which is just like a coredump is the copy of the memory to the file. In the context of the kernel,
+	its the content of RAM and swap which is copied into the disk. When the kernel panics, kdump will start up and copy the contents of ram and swap and store it
+	on some persistent disk, so that we can access it later. But there is a problem, kdump is something that has to be running on the system, but as mentioned when the 
+	kernel panics, nothing works on the system. So, there is a problem we wanted to run something and have nothing to run it. This is where kexec comes into the picture. Kexec
+	executes something in the kernel. kexec is the feature from the kdump and can be used for several features such as fast reboot which is when you are running a kernel, you do a package
+	update and want to run without reboot. can execute the kernel without going to full reboot. Its like old kernel executing the new kernel. Not to be confused with kslice and kgraph which
+	is like live patching of the kernel, where you have one kernel running and subsequently you replace it with another image's code. For this I need to have the new image store somewhere.
+	can't store on disk to execute later because operations on the disk need processing from the kernel. I need the code to be where I am just about to be executed. So, it needs to be in
+	physical memory, so it can be executed any time in future. So, for this I have to reserve a piece of memory to be executed on panic. For, this I will pre-allocate at the boot time
+	to use some portion of the memory for nothing else and something else in the future will populate that memory with some binary image which kexec will be able to execute when it needs to.
+	So using kdump, kexec provisions this piece of memory with a kdump kernel image. For this, we need to pass the crashkernel paramter to the kernel at the boot time and kdump knows of 
+	that reserved memory and will put in that region the needed binary. This tells the kernel to before stopping, do the kexec at this physical memory.Thus, we have the new kernel image
+	doing something else. Everything that was there in the memory is still there. nothing cleared it. These contents can be copied and stored on the disk, on nfs, ssh. With this we 
+	will do the post mortem analysis. It is the size of the ram + size of the swap. This will be quite huge on the server. But sometimes we don't need to store everything. we don't want
+	the user space virtual memory. We need to zero it out for privacy as well. so, we have big 0's which can be easily compressed
+	
+	There is utility called crash which can do the postmortem on vmcore. Crash is based out of gdb.
+	Inputs - vmcore and kernel image
+	result - snapshot of system at the time of crash, acess to the kernel data structures, access to statistics, access to logs
+	This same as you do with the application. what you get is the same environment you would have got when the system crashed. you can get the dmesg. you have the access to the data
+	structures of the kernel, everything from the filesytem to network is there in ram. you have ps, you have mount, memory. you can cast a pointer in a memory
+	
+	crash case study: OOM (out of memory), in the normal system you have oom killer that kills the processes that consume ram to free up the ram, but sometimes if oom killer cannot
+	cope with the amount of memory being used, it will give up and let the kernel panic. You will see that one particular process failed to occupy the memory, but that was not the one
+	occupying the mrmory. we need to figure out the culprit. run kmem -i
+	case study : lockups (deadlock). you can use bt to figure out what processes were running on the system and which function they were stuck on and if they were stuck on spin lock, you
+	will be able to see what spinlock was it.
+	
+	References:
+	Documentation/kdump/kdump.txt
+	people.redhat.com/anderson/crashwhitepaper
+	access.redhat.com/labinfo/kdumphelper
+	access.redhat.com/solutions/6038
+	
+	Kernel Features
+	+printk - CONFIG_PRINTK, /proc/sys/kernel/printk
+	+DebugFS - Special ram based filesytem dedicated for kernel debugging
+	   documentation/filesystems/debugfs.txt
+	   CONFIG_DEBUG_FS, mount -t debugfs none /sys/kernel/debug
+	   No restrictions. With proc, you have all the process related information, with sys, its kernel objects. Debugfs, you are free to do whatever you want. its the interface
+	   for the user
+	+ Dynamic debug
+	  + CONFIG_DYNAMIC_DEBUG
+	  + Documentation/dynamic-debug-howto.txt
+	  + dynamic activation/deactivation of kernel information code.
+	  pr_debug and dev_debug
+	  control file <debugfs>/dynamic_debug/control
+	  you can activate/deactive corresponding to specific path, module
+	+ Probes
+	  This is regarding tracing
+	  What values are there in the variable, where I am in the kernel
+	  There are static probes and dynamic probes
+	  Static probes are more trace oriented
+	  printk is the part of source code. its less featured static probe
+	  present in the unlikely branch - optional source code
+	  small overhead even when off because there would be variable which will be on/off
+	  Dynamic probes are more debug oriented. Its more like breakpoints. you break your code to do other things
+	  No overhead when off, but has high overhead when on
+	  you need the debug symbols and deep knowledge of the kernel map
+	  There were kernel markers from 2.6.24 to 2.6.32
+	  They have been replaced by tracepoints and trace events
+	  Trace mark was directly embedded into the kernel, so overhead was high. So, tracepoints were added to replace kernel markers in order to separate instrumentation code
+	  from kernel code. What does it mean is that when you want to use the trace point you will declare it and give it a name. When the code will reach the trace name function
+      it will put tracing events when on. to activate/deactivate trace point, you associate probe with tracepoint. by using another module. the common use of that is that you
+	  make another module. its initialization will do the registration of the probe to specific tracepoints and at that point the tracepoint will be activated. so each time the
+	  kernel hits the trace name, it will put the events and it will call the call back. In the call back you can do printk, you can do whatever you want. you unregister the tracepoint
+	  when you unload the module and it will off the trace point and trace name will have no overhead
+	  Before 2.6.37, a global variable was used to check if the trace was active and will invoke the trace if active. so there was a little overhead of checking and cache miss. After 2.6.37
+	  using the linker they were replaced by no-ops, when registered, this section will be replaced with function.
+	  But with this also, it was not easy to use as you have to register/unregister the module. Trace events have been added for that
+	  TRACE	_EVENT(name, proto, args, struct, assign, print). Now, when the module declares the trace point by using the TRACE_EVENT macro in the rootfs and through the debugfs, there you
+	  will have lot of files where you can catch all the available trace points, you can activate event for events. Directly on the console you can manage your tracepoints.
+	  Documentation/trace/events.txt
+	  When our trace point is hit, you will commit it in binary format into ring buffer and tools like ltting, ftrace and perf will see them in string format
+	  DECLARE_TRACE(name, proto, args) - declaration
+	  DEFINE_TRACE(name) - define the implementation
+	  trace_name(args)
+	  register_trace_name(callback, user_data)
+	  unregister_trace_name(callback, user_data)
+	  tracepoint_synchronise_unregister()
+	  CONFIG_TRACEPOINTS (autoselected boolean) and Documentation/trace/tracepoints.txt
+	  
+	  KProbes
+	   + Dynamic probes
+	   + Software breakpoints
+	   + CONFIG_KPROBES
+	   + Documentation/Kprobes.txt
+	   These are the not the traces you have to the code, but these are events you had in the binary code at the run time. its not the modification of the source code, but modification
+	   of the binary image. For that it will use software breakpoints
+	   registering/unregistering is like trace points
+	   struct kprobe
+	   {
+	   const char *symbol_name,
+	   unsigned int offset;
+	   kprobe_pre_handler_t pre_handler
+	   kprobe_post_handler_t post_handlergg\\
+	   }
+	   register_kprobe(), unregister_kprobe()
+	   its like trace events. Kprobe is like a structure which says I want to have a probe at this kernel symbol, potentially a offset in the function. so you have a function name and
+	   offset. when will point will be hit, a pre_handler function you will put in the structure will be called (refer diagram in book)
+	   Actual implementation of breakpoints will depend on architecture. In ARM #define KPROBE_BREAKPOINT_INSTRUCTION	0Xe7f001f8. on ARM you will use an instruction that is guaranteed
+	   by ARM to be an illegal instruction. so you will do a fault and to manage this fault you have a breakpoint
+	   
+	+ Perf Events
+	  These are for performance measurement. These are for profiling. These are API's which will abstract on modern CPUs. you have a performance counters on ARM processor, you have printf.
+		performance registers, you can manage to record events on the how much you missed the cache, cycles, how much you hit the branch.On CPU's you have limited number of registers, but you can
+		ask kernel, for example you have 4 regs, you can ask 10 regs. it will do the round robin
+		So, there are hardware events
+		   Special registers on most modern CPU's
+		   limited number, round robin when needed
+		   cycles, cache misses,  branch hits
+		Software events which don't required the registers
+		   context s/ws, page faults
+		 CONFIG_PERF_EVENTS
+		 On ARM, access to PMU through the CP15 register
+		 
+	+ FTrace (function tracer)
+		Ftrace is also something in the kernel that is used. Time source is local cpu clock, so the clocks that are not guaranteed to be coherence on the differnct cpus, but
+		that are quit accurate on one cpu. you can use the global monotonic clock that is less accurate. you can also use the atomic counters, if you are not intereseted in timings, but
+		events which has a less overhead. 
+		Functionality (Various tracers (function, graph function, irqs off, wakeup, branch)
+		various time sources (local and global clocks, atomic counters)
+		Function and event filters - you can give lot of filters. you can filter it on function name. it can use trace prints. it can use kprobes also
+		Early boot tracing - you can do it using command line, ftrace=<name of tracer> and traces will start as soon as possible
+		Refer the diagram in the book. so ftrace will basically put some software when you hit the function, you will do the extra thing that will log this entry and htere will be 
+		extra thing at the exit which will log the exit of the function and it will take timings of each functions execution. The interface of the ftrace is only through debugfs where you 
+		have the tracing files. you may have the available traces. you have function tracer, you have branch function tracer that will give you. you have irqs off that will give you the
+		highest time passed since the irqs deactivated. 
+		you have some tools like trace_cmd and Kernel shark	that will show you graphically.
+		
+	+ Lttng -
+		Functionality
+		 - Trace point tracer
+		 - Kprobes support
+		 - Mcount support
+	Not in mainline (modules)
+	Based on kprobes, optionally on kprobes and mcount
+	It's more like ftrace. But more graphics. The best thing about it is that you can debug and trace at kernel, but also at the userland. you can debug your applications. It provides the 
+	Libraries. it can show you	the complete trace from app to kernel.
+	
+	Debuggers
+	+ KGDB - its an implementation of GDB server in the kernel. you can use your toolchain specialized gdb. breakpoints watchpoints, all this step by step are all architecture dependent
+	Early boot debug (kgdboc, kgdbwait, kgdbcon). on cortex A15 you have a good support, on cortex A8, you have not much support
+	+ KGTP - it uses the kprobes framework
+	  - GDB server/Kprobes
+	  - Tracepoint support
+	  - Serial and Ethernel transport
+	 
+  + Profilers
+	There is Perf: Its an API, but also a set of tools. They are localized in kernel sources under tools/perf. In fact you configure perf and do make, it will make tools also.
+	Like ftrace, there are lot of profilers, you can sample on basis of events. like ftrace, it has debugfs interface. you can profile the cache misses. on ARM we have Oprofile, 
+	which uses perf as backend
+	perf Top
+	+ Gprof2Dot
+	+ FlameGraph (for kernel Latency)
+	+ Kmemleak - Memory leaks. It's in the kernel hacking part of the kernel
+	  Functionality
+	  Garbage collector based memory profiler
+	  kmalloc, vmalloc and friends
+	  Log pointer, size and backtrace, unlog at freee
+	  Period scan (10min default)
+	  its like valgrind for the kernel
+	  cat /sys/kernel/debug/kmleak
+	  
+  + Miscelleneous
+    + SystemTap
+	Functionality
+	Lightweight debug
+	Kprobes front end using a scripting language
+	Trace dumps on Oops
+	Tracepoint support
+	Perf Support
+	It has to port for all the debugging features in the kernel. you can do light weight debug with kprobes, it has to do trace dump on oops. its all in one tool. it uses all the
+	kernel tools to give you an information
