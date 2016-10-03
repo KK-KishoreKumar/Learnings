@@ -1,0 +1,4 @@
+How to use the memory bariers in optimized way?
+How is PCI addresss (Physically IO) lines used?
+When do we use GFP_USER used?
+

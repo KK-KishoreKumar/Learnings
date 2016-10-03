@@ -67,3 +67,73 @@ omap_i2c_add_bus() defined in arch/arm/plat-omap/i2c.c, this in turns invokes th
        With this we have registered the i2c bus 2 and i2c device in one go.
         + Also as part of omap_device_register, we take the resource info such as memory resouce, irq resource from 
 	the oh and add the resources to the platform device.
+  Let's discuss the next component which is I2C adapter driver:
+      + The I2C adapter driver for am335x is located at drivers/i2c/busses/i2c-omap.c
+      + The adapter driver is defined as platform driver with following structure:
+      static struct platform_driver omap_i2c_driver = {
+      	.probe          = omap_i2c_probe,
+      	.remove         = omap_i2c_remove,
+      	.driver         = {
+      		.name   = "omap_i2c",
+      		.owner  = THIS_MODULE,
+      		.pm     = OMAP_I2C_PM_OPS,
+      	},
+      }
+	Whenever any bus is registered as seen above, the probe of this driver is invoked. Following are things done in probe:
+	 + We get the platform resources such as mem and irq. Request the memory regions. Then we allocate the omap_i2c_device
+	   which consists of fields as below:
+	    + struct device
+	    + void __iomem *base
+	      int irq, struct resource *ioarea, 
+	      speed, struct i2c_adapter,
+	    + we initialize these fields from the pdev which we got as parameter, do the ioremp and set omap_device as drv_data
+	   for pdev.
+	    + Then we invoke the omap_i2c_init to initialize the i2c bus. Register the irq handler.
+	    + Next thing is to initialize the adapter device as below:
+	      set omap_i2c_device as driver data from adapter
+	      iniatialize the adap algo with omap_i2c_algo
+	      initialize the adapter number and then we finally invoke the i2c_add_numbered_adapter which does the following:
+	        + It allocate the IDR (ID to pointer) for adapter. Gets us the pointer from adapter without needing table.
+		+ Then we call the i2c_register_adapter which does the following:
+		   + Intialize the adap->bus to i2c_bus_type and adap-dev.type = i2c_adap_type and then call the device register.
+		   + It invokes the i2c_scan_static_board which does the following:
+		      + if the board_info bus number matches with the adapter number, it invokes the i2_new_device which in turn
+		        creates the client device for the i2c devices registered in the board dependent file. The client is updated
+			with platform_data, flags, address, irq as passed by i2c_board_info, i2c_adapter.
+		      + once the registration of the client is done, the probe of the driver may get invoke if the driver is
+		        registered.
+	
+	Next component of the i2c subsystem is the I2c device driver. For this examples, I am considering the eeprom driver,
+	located at drivers/misc/eeprom/at24.c. Below is the structure for the same. It has the name as well as id_table. Our
+	board specific eeprom driver uses the id table as below. In the init of the driver, we invoke i2c_add_driver which registers
+	the driver with the i2c subsystem. Here, we define the name, probe, remove and id_table. The i2c_add_driver in turns invokes
+	the  i2c_register_driver() which invokes the probe for all the devices.
+	        {
+			                /* Baseboard board EEPROM */
+			I2C_BOARD_INFO("24c256", BASEBOARD_I2C_ADDR),
+			.platform_data  = &am335x_baseboard_eeprom_info,
+		},
+
+	static struct i2c_driver at24_driver = {
+		.driver = {
+			.name = "at24",
+			.owner = THIS_MODULE,
+		},
+		.probe = at24_probe,
+		.remove = __devexit_p(at24_remove),
+		.id_table = at24_ids,
+	};
+
+	static int __init at24_init(void)
+	{
+		if (!io_limit) {
+		pr_err("at24: io_limit must not be 0!\n");
+		return -EINVAL;
+	}
+
+		io_limit = rounddown_pow_of_two(io_limit);
+		return i2c_add_driver(&at24_driver);
+	}
+module_init(at24_init);
+
+

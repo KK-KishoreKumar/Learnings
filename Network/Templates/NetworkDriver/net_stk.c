@@ -188,13 +188,11 @@ static int rtl8101_init_buffers(DrvPvt *pvt)
 	 * Rx and Tx desscriptors needs 256 bytes alignment.
 	 * pci_alloc_consistent provides more.
 	 */
-	pvt->TxDescArray = pci_alloc_consistent(pdev, R8101_TX_RING_BYTES,
-											&pvt->TxPhyAddr);
+	pvt->TxDescArray = pci_alloc_consistent(pdev, R8101_TX_RING_BYTES, &pvt->TxPhyAddr);
 	if (!pvt->TxDescArray)
 		return -ENOMEM;
 
-	pvt->RxDescArray = pci_alloc_consistent(pdev, R8101_RX_RING_BYTES,
-											&pvt->RxPhyAddr);
+	pvt->RxDescArray = pci_alloc_consistent(pdev, R8101_RX_RING_BYTES, &pvt->RxPhyAddr);
 	if (!pvt->RxDescArray)
 	{
 		pci_free_consistent(pdev, R8101_TX_RING_BYTES, pvt->TxDescArray,
