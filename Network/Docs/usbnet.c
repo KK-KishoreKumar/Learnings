@@ -405,8 +405,6 @@ static inline void rx_process (struct usbnet *dev, struct sk_buff *skb)
 		if (dev->driver_info->flags & FLAG_MULTI_PACKET)
 			dev_kfree_skb_any(skb);
 		else
-		{
-			printk("usbnet_skb_return called from rx_process");
 			usbnet_skb_return(dev, skb);
 		return;
 	}
@@ -509,11 +507,12 @@ static void intr_complete (struct urb *urb)
 {
 	struct usbnet	*dev = urb->context;
 	int		status = urb->status;
+	printk("In Intr Complete\n");
 
 	switch (status) {
 	/* success */
 	case 0:
-		printk("In Intr, case 0");
+		printk("Calling the status\n");
 		dev->driver_info->status(dev, urb);
 		break;
 
@@ -545,6 +544,7 @@ static void intr_complete (struct urb *urb)
 /*-------------------------------------------------------------------------*/
 void usbnet_pause_rx(struct usbnet *dev)
 {
+	printk("Pause invoked\n");
 	set_bit(EVENT_RX_PAUSED, &dev->flags);
 
 	netif_dbg(dev, rx_status, dev->net, "paused rx queue enabled\n");
@@ -555,11 +555,11 @@ void usbnet_resume_rx(struct usbnet *dev)
 {
 	struct sk_buff *skb;
 	int num = 0;
+	printk("Resume Rx\n");
 
 	clear_bit(EVENT_RX_PAUSED, &dev->flags);
 
 	while ((skb = skb_dequeue(&dev->rxq_pause)) != NULL) {
-		printk("usbnet_skb_return called from resume_rx");
 		usbnet_skb_return(dev, skb);
 		num++;
 	}
@@ -1187,15 +1187,20 @@ static void usbnet_bh (unsigned long param)
 	struct sk_buff		*skb;
 	struct skb_data		*entry;
 
+	printk("Tasklet called\n");
+
 	while ((skb = skb_dequeue (&dev->done))) {
+		printk("Tasklet: In Dequeue\n");
 		entry = (struct skb_data *) skb->cb;
 		switch (entry->state) {
 		case rx_done:
 			entry->state = rx_cleanup;
+			printk("Tasklet: Calling RX Process\n");
 			rx_process (dev, skb);
 			continue;
 		case tx_done:
 		case rx_cleanup:
+			printk("Tasklet: TX done/rx cleanup\n");
 			usb_free_urb (entry->urb);
 			dev_kfree_skb (skb);
 			continue;
@@ -1206,6 +1211,7 @@ static void usbnet_bh (unsigned long param)
 
 	// waiting for all pending urbs to complete?
 	if (dev->wait) {
+			printk("Tasklet: In Wait\n");
 		if ((dev->txq.qlen + dev->rxq.qlen + dev->done.qlen) == 0) {
 			wake_up (dev->wait);
 		}
