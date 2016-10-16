@@ -62,7 +62,7 @@ omap_i2c_add_bus() defined in arch/arm/plat-omap/i2c.c, this in turns invokes th
          platform_data (pdata - omap_i2c_bus_platform_data)
      - This is turn invokes the omap_device_build_ss. This does the following things:
         + Allocate the platform device and set the name of the device. This is used for binding.
-	+ Allocates the omap device with omap_device_alloc
+	+ Allocates the omap device with omap_device_alloc. This is where the resource structure is filled as per hw_mod data. This includes the things such as irq, memory mapping and so on. Also, it invokes the platform_device_add_resource to add the resources to the platform device. These resource are passed as an argument to the corresponding platform driver at drivers/i2c/buses/i2c-omap, which maps the virtual address for corresponding i2c bus. 
 	+ Add the device data to the driver and the register the platform device with platform_device_add.
        With this we have registered the i2c bus 2 and i2c device in one go.
         + Also as part of omap_device_register, we take the resource info such as memory resouce, irq resource from 
@@ -80,26 +80,31 @@ omap_i2c_add_bus() defined in arch/arm/plat-omap/i2c.c, this in turns invokes th
       	},
       }
 	Whenever any bus is registered as seen above, the probe of this driver is invoked. Following are things done in probe:
-	 + We get the platform resources such as mem and irq. Request the memory regions. Then we allocate the omap_i2c_device
-	   which consists of fields as below:
+	 + We get the platform resources such as mem and irq. Request the memory regions. Then we allocate the omap_i2c_device which consists of fields as below:
 	    + struct device
 	    + void __iomem *base
 	      int irq, struct resource *ioarea, 
 	      speed, struct i2c_adapter,
-	    + we initialize these fields from the pdev which we got as parameter, do the ioremp and set omap_device as drv_data
-	   for pdev.
-	    + Then we invoke the omap_i2c_init to initialize the i2c bus. Register the irq handler.
+	    + we initialize these fields from the pdev which we got as parameter, do the ioremp and set omap_device as drv_data for pdev. We also do the ioremap of the base address for i2c bus.
+	    + Next step is get the FIFO depth for this i2C and set the FIFO notification Threshold to the half of fifo size 
+	    + Then we invoke the omap_i2c_init to initialize the i2c bus. Register the irq handler. This does the following:
+	       + Soft reset the I2C controller
+	       + Set the Auto Idle mode for this engine and various other pm features. Then, we set the function clock to 
+	       12MHz.
+	       + Then take the i2c controller out of reset and enable the interrupts.
+	    + Then we register the handler with request_irq function
 	    + Next thing is to initialize the adapter device as below:
-	      set omap_i2c_device as driver data from adapter
+	      set omap_i2c_device as driver data for adapter and set OWNER and class which is I2C class. 
+	      Next thing is to give the name as "OMAP I2c adapter"
 	      iniatialize the adap algo with omap_i2c_algo
 	      initialize the adapter number and then we finally invoke the i2c_add_numbered_adapter which does the following:
+	        + I2C numbered adapter is basically for registering the static adapters i.e. static bus numbers, typically at board initialization time and used for SOC chip adapters. Here, i2c_board_info is used for configuring the i2c devices 
 	        + It allocate the IDR (ID to pointer) for adapter. Gets us the pointer from adapter without needing table.
 		+ Then we call the i2c_register_adapter which does the following:
-		   + Intialize the adap->bus to i2c_bus_type and adap-dev.type = i2c_adap_type and then call the device register.
+		   + Intialize the adap->bus to i2c_bus_type and adap-dev.type = i2c_adap_type and then call the device register to register the adapter driver.
 		   + It invokes the i2c_scan_static_board which does the following:
-		      + if the board_info bus number matches with the adapter number, it invokes the i2_new_device which in turn
-		        creates the client device for the i2c devices registered in the board dependent file. The client is updated
-			with platform_data, flags, address, irq as passed by i2c_board_info, i2c_adapter.
+		      + if the board_info bus number matches with the adapter number, it invokes the i2_new_device which in turn creates the client device for the i2c devices registered in the board dependent file with bus number that of this adapter. The client is updated with platform_data, flags, address, irq as passed by i2c_board_info, i2c_adapter.
+		      + Then, notify the drivers which are registered for I2c of the availability of the new adapter and invokes the process_new_adapter for that driver (need to understand fuly as it's internally calls the i2c_detect for new i2c subsystem and for legacy it invokes the attach function (what was this attach used for earlier and which driver does it belong to? adapter driver or i2c device driver. 
 		      + once the registration of the client is done, the probe of the driver may get invoke if the driver is
 		        registered.
 	
