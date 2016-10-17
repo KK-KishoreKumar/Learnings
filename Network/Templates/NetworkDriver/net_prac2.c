@@ -7,10 +7,16 @@
 #include "net_prac.h"
 
 #define NUM_TX_DESC	4
-#define DRV_NAME        "rt8139"                                 |  #define NUM_TX_DESC     4
-#define RT_VENDOR       0X10EC                                   |  ----------------------------------------------------------------
-#define RT_DEVICE       0X8136                                   |  ----------------------------------------------------------------
+#define DRV_NAME        "rt8139"
+#define RT_VENDOR       0X10EC
+#define RT_DEVICE       0X8136
 #define TX_TIMEOUT      (6 * HZ) 
+
+#define RX_BUF_LEN_IDX	2
+#define RX_BUF_LEN	(8192 << RX_BUF_LEN_IDX)
+#define RX_BUF_PAD	16
+#define RX_BUF_WRAP_PAD	2048
+#define RX_BUF_TOT_LEN	(RX_BUF_LEN + RX_BUF_PAD + RX_BUF_WRAP_PAD)
 
 struct rt8139_priv {
 	struct pci_dev *pci_dev;
@@ -22,6 +28,11 @@ struct rt8139_priv {
 	unsigned char *tx_buf[NUM_TX_DESC];
 	unsigned char *tx_bufs;
 	dma_addr_t tx_bufs_dma;
+
+	struct net_device_stats stats;
+	unsigned char *rx_ring;
+	dma_addr_t rx_ring_dma;
+	unsigned int cur_rx;
 };
 
 
@@ -104,11 +115,19 @@ static void rt8139_init_hw(struct net_device *dev)
 	uint32_t i;
 	rt8139_chip_reset(ioaddr);
 	/* Enable the TX */
-	writeb(CmdTxEnb, ioaddr + CR);
+	writeb(CmdTxEnb | CmdRxEnb, ioaddr + CR);
 	/* Tx config */
-	writeb(0X600, ioaddr + CR);
+	writel(0X600, ioaddr + CR);
+	/* Rx Config */
+	writel((1 << 12) | (7 << 8) | (1 << 7) | (1 << 3) | (1 << 2) | (1 << 1), ioaddr + RCR);
 	for (i = 0; i < NUM_TX_DESC; i++)
 		writel(tp->tx_bufs_dma + (tp->tx_buf[i] - tp->tx_bufs), ioaddr + (TSAD0 + i * 4));
+	/*init RBSTART */
+	writel(tp->rx_ring_dma, ioaddr + RBSTART);
+	
+	/* init Missed packet counter */
+	writel(0, ioaddr + MPC);
+
 	/* Enable all the interrupts */
 	writew(INT_MASK, ioaddr + IMR);
 	netif_start_queue(dev);
@@ -120,6 +139,7 @@ void rt8139_init_ring(struct net_device *dev)
 	int i;
 	struct rt8139_priv *tp = netdev_priv(dev);
 	tp->cur_tx = 0;
+	tp->cur_rx = 0;
 	tp->dirty_tx= 0;
 
 	for (i = 0; i < NUM_TX_DESC; i++)
@@ -139,9 +159,19 @@ static int rt8139_open(struct net_device *dev)
 		return retval;
 	tp->tx_buffs = pci_alloc_consistent(tp->pci_dev, TOTAL_TX_BUF_SIZE, &tp->tx_bufs_dma);
 
-	if (tp->tx_buffs == NULL) {
+	tp->rx_ring = pci_alloc_consistent(tp->pci_dev, RX_BUF_TOT_LEN, &tx->rx_ring_dma);
+
+	if (tp->tx_buffs == NULL || tp->rx_ring == NULL) {
 		dev_err(&dev->dev, "Unable to allocate the buffers\n");
 		free_irq(dev->irq);
+		if (tp->tx_buffs) {
+			pci_free_consistent(tp->pci_dev, TOTAL_TX_BUF_SIZE, tp->tx_buffs, tp->tx_bufs_dma);
+			tp->tx_buffs = NULL;
+		}
+		if (tp->rx_ring) {
+			pci_free_consistent(tp->pci_dev, RX_BUF_TOT_LEN, tp->rx_ring, tp->rx_ring_dma);
+			tp->rx_ring = NULL;
+		}
 		return -ENOMEM;
 	}
 	tp->tx_flag = 0;

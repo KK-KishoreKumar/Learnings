@@ -6,7 +6,7 @@ http://venkateshabbarapu.blogspot.in/2012/11/i2c-driver-in-linux.html
 
 http://opensourceforu.com/2015/01/writing-i2c-clients-in-linux/
 
-http://invo-tronics.com/i2c-driver-for-linux-based-embedded-system/ (Good Explaination)
+http://invo-tronics.com/i2c-driver-for-linux-based-embedded-system/ (Good Explaination) Very nice explaination of the complete i2c subsystem, especially the adapter driver registered as the platform driver.
 
 https://i2c.wiki.kernel.org/index.php/Driver_Architecture
 
