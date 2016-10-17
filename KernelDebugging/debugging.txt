@@ -56,6 +56,7 @@ https://kernelnewbies.org/Linux_Kernel_Tester%27s_Guide_Chapter3
 
 Debugging when the kernel hangs even before giving out the messages (IMP)
 http://elinux.org/Debugging_by_printing#Debugging_early_boot_problems
+https://en.wikibooks.org/wiki/The_Linux_Kernel/System#Debugging
 
 	
 ps aux | grep -i hung
