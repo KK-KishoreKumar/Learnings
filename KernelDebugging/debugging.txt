@@ -1,3 +1,13 @@
+Here, the intention was to understand the kernel debugging mechanism. Started with https://kernelnewbies.org/Linux_Kernel_Tester%27s_Guide_Chapter3, which explains the klogd and few other means of debugging by printing. Apart from this, do visit the page https://kernelnewbies.org/. It has several useful links to understand the kernel subsystems. 
+Next article to look into is http://elinux.org/Debugging_by_printing#Debugging_early_boot_problems which explains the debugging by printing in detail. Explain about enabling the early debug messages. 
+Refer kernel documentation for dynamic debugging and https://lwn.net/Articles/434833/.
+http://www.ibm.com/developerworks/linux/library/l-kernel-logging-apis/index.html (Explains the architecture of printing) and is saved as kernel_logging_infra.
+
+
+Difference between klogd and syslogd.
+What are the options other than +p in dynamic debug
+What are the configurations for modprobe
+difference between dev_debug, pr_* messages.
 kernel is located at C0000, how gdb gets the address from the vmlinuz?
 what is bug on?
 what is the size of kernel? what is bzimage and vmlinux
@@ -50,6 +60,7 @@ _
 Dynamic debug messages
 https://lwn.net/Articles/434833/
 https://lwn.net/Articles/434856/
+http://lwn.net/Articles/487437/
 https://www.kernel.org/doc/Documentation/dynamic-debug-howto.txt
 https://blackfin.uclinux.org/doku.php?id=linux-kernel:debug:early_printk (Nice article for early debug)
 https://kernelnewbies.org/Linux_Kernel_Tester%27s_Guide_Chapter3
