@@ -35,6 +35,7 @@ Crash in instantaneous in nature and is different from hang
   echo 0 > /proc/sys/kernel/hung_task_timeout_secs
 http://lse.sourceforge.net/kdump/documentation/ols2oo5-kdump-paper.pdf	
 https://lwn.net/Articles/365835/
+http://opensourceforu.com/2010/11/kernel-tracing-with-ftrace-part-1/
 http://opensourceforu.com/2010/12/kernel-tracing-with-ftrace-part-2/
 http://opensourceforu.com/2010/10/debugging-linux-kernel-with-debugfs/
 http://opensourceforu.com/2011/02/debug-kernel-panics-with-crash/

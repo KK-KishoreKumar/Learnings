@@ -1,0 +1,25 @@
+Here, the intention is to understand the steps required to port the kernel. At, first I would start with am33xx kernel (kernel 3.2.0 (without DTB support), then will switch to DTB:
+First thing which we need is to define the MACHINE_START structure as below:
+
+MACHINE_START(AM335X_EVM, "am335xevm")
+	.atag_offset = 0X100,
+	.map_io  = am335x_evm_map_io,
+	.init_early = am335x_init_early,
+	.init_irq = t181xx_init_irq,
+	.handle_irq = omap3_intc_handle_irq,
+	.timer = &omap3_am33xx_timer,
+	.init_machine = am33xx_init_machine,
+MACHINE_END
+
+As seen above, it defines the various initialization functions for the board which would get invoked during the various stages of the kernel booting. Let's start from the init/main.c, there is a function called start_kernel where we invoke the setup_arch(), defined in arch/arm/kernel/setup.c. Following are things done here:
+  + First get the mesc_descriptor structure. 
+  + Then, we initialize the init_mem structure fields such as start_code, end_code, end_data, brk.
+  + From here we invoke the paging init which sets up the page tables, initializes the zone memory maps.
+  + The funciton which we need to note is the devicemaps_init (arch/arm/mm/mmu.c). The first thing which we do over here is to allocate the vector table. After this the next thing is to create the mappings for the machine vectors. From the boards perspective, we invoke the map_io function for the specific machine to map in the statically mapped devices. So the corresponding map_io function for our board is located at arch/arm/mach-omap2/board-am335xevm.c. 
+  Note: Wanted to understand what the static mapping is and how do we decide what the virtual mapping should be, for what addresses. Got something from http://venkateshabbarapu.blogspot.in/2013/04/static-vs-dynamic-mapping-of-physical.html.
+  Note: Refer arch/arm/include/asm/pgtable-2level.h, when you have a time. It has a nice note on page table structure
+
+ + Next thing in setup_arch is to unflatten the device tree and create the nodes for it. Next thing is to reserve the memory for crash kernel.
+ + Then, we invoke the early_trap_init to initilize the traps.
+ + After this, we invoke, handle_irq function registered in mc_descriptor (omap3_intc_handle_irq) in arch/arm/mach-omap2/irq.c. He we take the irq base and invoke omap_intc_handle_irq which does the further set-up (need to understand)
+ + At last we invoke the init_early for our board which is located at arch/arm/mach-omap2/io.c. This is the one which does most of soc initialization such as clock_domain init, power domain init, hwmod_init (registers the various hw ips available such as uar1, uart2, i2c and so on)
