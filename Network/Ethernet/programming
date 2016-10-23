@@ -82,3 +82,65 @@ RMII management signals
     MDIO Management data I/O line (bidirectional, push-pull)
     MDC Management data clock line (unidirectional: MAC to PHY). MDC and MDIO can be shared among multiple PHYs.
 
+GMII interface
+ + It consists of following signals:
+   Gigabit media-independent Interface (GMII) is an interface between the Media Access Control (MAC) device and the physical layer (PHY). The interface defines speeds up to 1000 Mbit/s, implemented using a data interface clocked at 125 MHz with separate eight-bit data paths for receive and transmit, and is backwards compatible with the media-independent interface (MII) specification. It can also operate on fall-back speeds of 10 or 100 Mbit/s as per the MII specification.
+
+Data on the interface is framed using the IEEE Ethernet standard. As such it consists of a preamble, start frame delimiter, Ethernet headers, protocol specific data and a cyclic redundancy check (CRC).
+
+The GMII interface is defined in IEEE Standard 802.3, 2000 Edition.[5]
+Transmitter signals
+
+    GTXCLK – clock signal for gigabit TX signals (125 MHz)
+    TXCLK – clock signal for 10/100 Mbit/s signals
+    TXD[7..0] – data to be transmitted
+    TXEN – transmitter enable
+    TXER – transmitter error (used to corrupt a packet)
+
+There are two clocks, depending on whether the PHY is operating at gigabit or 10/100 Mbit/s speeds. For gigabit speeds, the GTXCLK is supplied to the PHY and the TXD, TXEN, TXER signals are synchronized to this. Otherwise for 10 or 100 Mbit/s the TXCLK (supplied by PHY) is used for synchronizing those signals. This operates at either 25 MHz for 100 Mbit/s or 2.5 MHz for 10 Mbit/s connections. The receiver clock is much simpler, with only one clock, which is recovered from the incoming data. Hence the GTXCLK and RXCLK are not coherent.
+Receiver signals
+
+    RXCLK – received clock signal (recovered from incoming received data)
+    RXD[7..0] – received data
+    RXDV – signifies data received is valid
+    RXER – signifies data received has errors
+    COL – collision detect (half-duplex connections only)
+    CS – carrier sense (half-duplex connections only)
+
+Management signals
+
+    MDC – management interface clock
+    MDIO – management interface I/O bidirectional pin.
+
+The management interface controls the behavior of the PHY. There are 32 addresses, each containing 16 bits. The first 16 addresses have a defined usage,[6] while the others are device specific. These registers can be used to configure the device (say "only gigabit, full duplex", or "only full duplex") or can be used to determine the current operating mode.
+Reduced gigabit media-independent interface
+Supported Ethernet speeds [Mbit/s] 	[MHz] 	Bits/clock cycle
+10 	2.5 	4
+100 	25  	4
+1000 	125  	8
+
+Reduced gigabit media-independent interface (RGMII) specifies a particular interface between an Ethernet MAC and PHY.
+
+RGMII uses half the number of data pins as used in the GMII interface. This reduction is achieved by clocking data on both the rising and falling edges of the clock in 1000 Mbit/s operation, and by eliminating non-essential signals (carrier-sense and collision-indication). Thus RGMII consists only of: RX_CTL, RXC, RXD[3:0], TX_CTL, TXC, TXD[3:0] (12 pins, as opposed to GMII's 24).
+
+Unlike GMII, the transmit clock signal is always provided by the MAC on the TXC line, rather than being provided by the PHY for 10/100 Mbit/s operation and by the MAC at 1000 Mbit/s. Source-synchronous clocking is used: the clock signal that is output (by either the PHY or the MAC) is synchronous with the data signals. This requires the PCB to be designed to add a 1.5–2 ns delay to the clock signal to make the setup and hold times on the sink. RGMII v2.0 specifies an optional internal delay, obviating the need for the PCB designer to add delay; this is known as RGMII-ID.
+
+To achieve these data-rates, data is clocked on rising and falling edges for 1000 Mbit/s, and on rising edges only for 10/100 Mbit/s.[7] The RX_CTL signal carries RXDV (data valid) on the rising edge, and (RXDV xor RXER) on the falling edge. The TX_CTL signal likewise carries TXEN on rising edge and (TXEN xor TXER) on the falling edge. This is the case for both 1000 Mbit/s and 10/100 Mbit/s.[8]
+Transmitter signals
+
+    TXC – clock signal
+    TXD[3..0] – data to be transmitted
+    TX_CTL – multiplexing of transmitter enable and transmitter error
+
+Receiver signals
+
+    RXC – received clock signal (recovered from incoming received data)
+    RXD[3..0] – received data
+    RX_CTL – multiplexing of data received is valid and receiver error
+
+Management signals
+
+    MDC – management interface clock
+    MDIO – management interface I/O bidirectional pin.
+
+RGMII version 1.3[9] uses 2.5V CMOS,[10] whereas RGMII version 2 uses 1.5V HSTL.[11]

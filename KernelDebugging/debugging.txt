@@ -2,9 +2,96 @@ Here, the intention was to understand the kernel debugging mechanism. Started wi
 Next article to look into is http://elinux.org/Debugging_by_printing#Debugging_early_boot_problems which explains the debugging by printing in detail. Explain about enabling the early debug messages. 
 Refer kernel documentation for dynamic debugging and https://lwn.net/Articles/434833/.
 http://www.ibm.com/developerworks/linux/library/l-kernel-logging-apis/index.html (Explains the architecture of printing) and is saved as kernel_logging_infra.
+https://lwn.net/Articles/604287/ (System call interface)
+SysRq
+https://en.wikipedia.org/wiki/Magic_SysRq_key
+http://aplawrence.com/Words2005/2005_04_13.html 
+
+Next thing worth looking at is https://blackfin.uclinux.org/doku.php?id=linux-kernel:debug:early_printk. Explains if the kernel hungs up during the early stages.
+
+Next thing was to go through https://en.wikibooks.org/wiki/The_Linux_Kernel/System#Debugging. This contains very nice documentation from the system perspective. Starts from the booting flow on the x86 platform.
+
+Next good thing to go through is https://wiki.ubuntu.com/Kernel/KernelDebuggingTricks. This keeps short and sweet:
+For built in code, one can do gdb on vmlinux and then disassemble on the console as follows:
+gdb  debian/build/build-generic/vmlinux
+(gdb) disassemble printk
+Dump of assembler code for function printk:
+0xffffffff8023dce0 <printk+0>:  sub    $0xd8,%rsp
+0xffffffff8023dce7 <printk+7>:  lea    0xe0(%rsp),%rax
+0xffffffff8023dcef <printk+15>: mov    %rsi,0x28(%rsp)
+0xffffffff8023dcf4 <printk+20>: mov    %rsp,%rsi
+0xffffffff8023dcf7 <printk+23>: mov    %rdx,0x30(%rsp)
+0xffffffff8023dcfc <printk+28>: mov    %rcx,0x38(%rsp)
+0xffffffff8023dd01 <printk+33>: mov    %rax,0x8(%rsp)
+0xffffffff8023dd06 <printk+38>: lea    0x20(%rsp),%rax
+0xffffffff8023dd0b <printk+43>: mov    %r8,0x40(%rsp)
+0xffffffff8023dd10 <printk+48>: mov    %r9,0x48(%rsp)
+0xffffffff8023dd15 <printk+53>: movl   $0x8,(%rsp)
+0xffffffff8023dd1c <printk+60>: movl   $0x30,0x4(%rsp)
+0xffffffff8023dd24 <printk+68>: mov    %rax,0x10(%rsp)
+0xffffffff8023dd29 <printk+73>: callq  0xffffffff8023d980 <vprintk>
+0xffffffff8023dd2e <printk+78>: add    $0xd8,%rsp
+0xffffffff8023dd35 <printk+85>: retq   
+End of assembler dump.
+
+Objdump
+
+If one has the built object code at hand, one can disassemble the object using objdump as follows:
+objdump -SdCg debian/build/build-generic/fs/dcache.o
+
+Another approach is to use the list command:
+manjo@hungry:~/devel/ubuntu/kernel/ubuntu-karmic-397906/debian/build/build-generic/drivers/scsi$ gdb sd.o
+(gdb) list *(sd_remove+0x20)
+This lists sd_remove + 0X20
+
+Next thing I referred is http://neependra.net/kernel/Debugging_Kernel_OOPs_FUDCon2011.pdf. It slides which shares some useful info as below:
+
++ objdump -S char-read-write.ko
++ Debugging a running kernel with gdb:
+	gdb vmlinux /proc/kcore
+	(gdb) p jiffies_64
+\$1 = 4295075081
+(gdb) core-file /proc/kcore
+(gdb) p jiffies_64
+\$2 = 4295225679
+
+Debugging a running kernel module:
+---------------------------------
+OOPs
+Debugging a running Kernel with gdb
+cd /sys/module/chrareadwrite/sections
+cat .bss .data .text
+0xf8e1e830
+0xf8e1e6f4
+0xf8e1e000
+
+gdb) add-symbol-file /home/nkhare/Training/LinuxKernel/oops/char-dev-read-write-oop/char-read-write.ko 0xf8e1e000 -s .data 0xf8e1e6f4 -s .bss 0xf8e1e830
+add symbol table from file "/home/nkhare/Training/LinuxKernel/oops/char-dev-read-write-oop/char-read-write.ko" at
+.text_addr = 0xf8e1e000
+.data_addr = 0xf8e1e6f4
+.bss_addr = 0xf8e1e830
+(y or n) y
+Reading symbols from /home/nkhare/Training/LinuxKernel/oops/char-dev-read-write-oop/char-read-write.ko...done.
+(gdb) p mycdrv1_read
+\$1 = {ssize_t (struct file *, char *, size_t, loff_t *)} 0xf8e1e000 <mycdrv1_read>
+(gdb) list mycdrv1_read
+
+Kernel OOPS:
+http://opensourceforu.com/2011/01/understanding-a-kernel-oops/
+https://wiki.ubuntu.com/DebuggingKernelOops
+
+Kdump 
+Got couple of docs for the same:
+crash_dump_analysis.pdf
+www.dedoimedo.com-crash-book.pdf (Details out many things specially kdump)
+Nice explaination about kdump is given in open source for you article.
+
+KGDB
+Nice explaination about KGDB is given at http://opensourceforu.com/2011/03/kgdb-with-virtualbox-debug-live-kernel/
 
 
 Difference between klogd and syslogd.
+http://www.linuxjournal.com/article/4058 (Klogd and Syslog) explained.
 What are the options other than +p in dynamic debug
 What are the configurations for modprobe
 difference between dev_debug, pr_* messages.
@@ -45,7 +132,7 @@ http://opensourceforu.com/2011/12/getting-started-with-systemtap/
 http://opensourceforu.com/2016/07/boost-system-performance-linux-kernel-recompilationoptimisation/
 http://elinux.org/Ftrace
 https://events.linuxfoundation.org/slides/2010/linuxcon_japan/linuxcon_jp2010_rostedt.pdf
-https://lwn.net/Articles/366796/
+	https://lwn.net/Articles/366796/
 http://opensourceforu.com/2011/02/debug-kernel-panics-with-crash/
 http://opensourceforu.com/2015/10/the-xenomai-project-a-linux-based-rtos/
 http://opensourceforu.com/2009/01/the-crux-of-linux-notifier-chains/ (Notifier mechanisms in kernel)

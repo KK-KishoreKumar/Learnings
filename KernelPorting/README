@@ -23,3 +23,54 @@ As seen above, it defines the various initialization functions for the board whi
  + Then, we invoke the early_trap_init to initilize the traps.
  + After this, we invoke, handle_irq function registered in mc_descriptor (omap3_intc_handle_irq) in arch/arm/mach-omap2/irq.c. He we take the irq base and invoke omap_intc_handle_irq which does the further set-up (need to understand)
  + At last we invoke the init_early for our board which is located at arch/arm/mach-omap2/io.c. This is the one which does most of soc initialization such as clock_domain init, power domain init, hwmod_init (registers the various hw ips available such as uar1, uart2, i2c and so on)
++ The other important things such as drivers_init, busses_init, platform_init are done in init thread. Then we do all the constructor calls and the all the init level calls.
++ Now, comes the important thing from the board perspective. As a part of mach_desc, we have field called init_machine, which in our case is am335x_evm_init. We do all the initialization related to board in this function:
+  + The first thing is to register the cpuidle functions with pm operations.
+  + Next thing is to invoke the mux_init for the board.
+  + Then, we initialize the serial ports. (Need to look from tty perspective)
+  + Then, we initialize the i2c, where we do plathora of thing:
+     + As a part of am335x_i2c0 we register daughter board eeprom, baseboard eeprom, cpld_reg, tlc5908 i2c backlight control driver, tps65910, tlv320aic3x audio codec.
+ + As as part of &am335x_baseboard_eeprom_info, there is one function am335x_evm_setup. This is where most of the initialization
+ things are done.
+    First fill up the mac address, then we read the configuration header and check its validity. Then, we go about checking the type of board and invoke the correponding set up function such as setup_general_purpose_evm for EVM board. This is where most of the board related initialization are done:
+   + We invoke the _configure_device with board_id, array of initialization functions - gen_purp_evm_dev_cfg as below:
+	static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
+        {am335x_rtc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
+        {clkout2_enable, DEV_ON_BASEBOARD, PROFILE_ALL},
+        {enable_ecap0,  DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
+                                                PROFILE_2 | PROFILE_7) },
+        {lcdc_init,     DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
+                                                PROFILE_2 | PROFILE_7) },
+        {mfd_tscadc_init,       DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
+                                                PROFILE_2 | PROFILE_7) },
+        {rgmii1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
+        {rgmii2_init,   DEV_ON_DGHTR_BRD, (PROFILE_1 | PROFILE_2 |
+                                                PROFILE_4 | PROFILE_6) },
+        {usb0_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+        {usb1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+        {evm_nand_init, DEV_ON_DGHTR_BRD,
+                (PROFILE_ALL & ~PROFILE_2 & ~PROFILE_3)},
+        {i2c1_init,     DEV_ON_DGHTR_BRD, (PROFILE_ALL & ~PROFILE_2)},
+        {lis331dlh_init, DEV_ON_DGHTR_BRD, (PROFILE_ALL & ~PROFILE_2)},
+        {mcasp1_init,   DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_3 | PROFILE_7)},
+        {mmc1_init,     DEV_ON_DGHTR_BRD, PROFILE_2},
+        {mmc2_wl12xx_init,      DEV_ON_BASEBOARD, (PROFILE_0 | PROFILE_3 |
+                                                                PROFILE_5)},
+        {mmc0_init,     DEV_ON_BASEBOARD, (PROFILE_ALL & ~PROFILE_5)},
+        {mmc0_no_cd_init,       DEV_ON_BASEBOARD, PROFILE_5},
+        {spi0_init,     DEV_ON_DGHTR_BRD, PROFILE_2},
+        {uart1_wl12xx_init,     DEV_ON_BASEBOARD, (PROFILE_0 | PROFILE_3 |
+                                                                PROFILE_5)},
+        {wl12xx_init,   DEV_ON_BASEBOARD, (PROFILE_0 | PROFILE_3 | PROFILE_5)},
+        {d_can_init,    DEV_ON_DGHTR_BRD, PROFILE_1},
+        {matrix_keypad_init, DEV_ON_DGHTR_BRD, PROFILE_0},
+        {volume_keys_init,  DEV_ON_DGHTR_BRD, PROFILE_0},
+ 	{uart2_init,    DEV_ON_DGHTR_BRD, PROFILE_3},
+        {haptics_init,  DEV_ON_DGHTR_BRD, (PROFILE_4)},
+        {sgx_init,      DEV_ON_BASEBOARD, PROFILE_ALL},
+        {NULL, 0, 0},
+
+ + The first function to get initialized is am335x_rtc_init for which the corresponding driver is am33xx-rtc for which the driver is located at drivers/rtc/omap-rtc.c
++ For each of these device one of sequence which is common is you set up the pin multiplexing, initialize the corresponding platform data and create the platform device for the same.
+
++ Let's now understand the CPSW initialization. For this, I have prepared a seperate document as Networking/Docs.
