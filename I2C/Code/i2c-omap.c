@@ -266,14 +266,14 @@ static const u8 reg_map_ip_v2[] = {
 static inline void omap_i2c_write_reg(struct omap_i2c_dev *i2c_dev,
 				      int reg, u16 val)
 {
-	__raw_writew(val, i2c_dev->base +
-			(i2c_dev->regs[reg] << i2c_dev->reg_shift));
+	__raw_writew(val, i2c_dev->base + i2c_dev->regs[reg]);
+			//(i2c_dev->regs[reg] << i2c_dev->reg_shift));
 }
 
 static inline u16 omap_i2c_read_reg(struct omap_i2c_dev *i2c_dev, int reg)
 {
-	return __raw_readw(i2c_dev->base +
-				(i2c_dev->regs[reg] << i2c_dev->reg_shift));
+	return __raw_readw(i2c_dev->base + i2c_dev->regs[reg]);
+				//(i2c_dev->regs[reg] << i2c_dev->reg_shift));
 }
 
 static void __omap_i2c_init(struct omap_i2c_dev *dev)
@@ -344,16 +344,18 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 	unsigned long internal_clk = 0;
 	struct clk *fclk;
 
-	if (dev->rev >= OMAP_I2C_REV_ON_3430_3530) {
+//	if (dev->rev >= OMAP_I2C_REV_ON_3430_3530) {
+//		printk("Pradeep: OMAP_I2C_REV_ON_3430_3530 \n");
 		/*
 		 * Enabling all wakup sources to stop I2C freezing on
 		 * WFI instruction.
 		 * REVISIT: Some wkup sources might not be needed.
 		 */
 		dev->westate = OMAP_I2C_WE_ALL;
-	}
-
+//	}
+#if 0
 	if (dev->flags & OMAP_I2C_FLAG_ALWAYS_ARMXOR_CLK) {
+		printk("Pradeep: OMAP_I2C_FLAG_ALWAYS_ARMXOR_CLK \n");
 		/*
 		 * The I2C functional clock is the armxor_ck, so there's
 		 * no need to get "armxor_ck" separately.  Now, if OMAP2420
@@ -376,8 +378,10 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 		if (fclk_rate > 12000000)
 			psc = fclk_rate / 12000000;
 	}
+#endif
 
-	if (!(dev->flags & OMAP_I2C_FLAG_SIMPLE_CLOCK)) {
+//	if (!(dev->flags & OMAP_I2C_FLAG_SIMPLE_CLOCK)) {
+		printk("Pradeep: OMAP_I2C_FLAG_SIMPLE_CLOCK \n");
 
 		/*
 		 * HSI2C controller internal clk rate should be 19.2 Mhz for
@@ -427,7 +431,9 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 		}
 		scll = (hsscll << OMAP_I2C_SCLL_HSSCLL) | fsscll;
 		sclh = (hssclh << OMAP_I2C_SCLH_HSSCLH) | fssclh;
-	} else {
+//	} else {
+#if 0
+		printk("Pradeep: it is OMAP_I2C_FLAG_SIMPLE_CLOCK \n");
 		/* Program desired operating rate */
 		fclk_rate /= (psc + 1) * 1000;
 		if (psc > 2)
@@ -435,6 +441,7 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 		scll = fclk_rate / (dev->speed * 2) - 7 + psc;
 		sclh = fclk_rate / (dev->speed * 2) - 7 + psc;
 	}
+#endif
 
 	dev->iestate = (OMAP_I2C_IE_XRDY | OMAP_I2C_IE_RRDY |
 			OMAP_I2C_IE_ARDY | OMAP_I2C_IE_NACK |
@@ -1126,9 +1133,10 @@ omap_i2c_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	init_completion(&dev->cmd_complete);
 
-	dev->reg_shift = (dev->flags >> OMAP_I2C_FLAG_BUS_SHIFT__SHIFT) & 3;
+	//dev->reg_shift = (dev->flags >> OMAP_I2C_FLAG_BUS_SHIFT__SHIFT) & 3;
 
 	pm_runtime_enable(dev->dev);
+	//pm_runtime_disable(dev->dev);
 	pm_runtime_set_autosuspend_delay(dev->dev, OMAP_I2C_PM_TIMEOUT);
 	pm_runtime_use_autosuspend(dev->dev);
 
@@ -1144,36 +1152,47 @@ omap_i2c_probe(struct platform_device *pdev)
 	 */
 	rev = __raw_readw(dev->base + 0x04);
 
-	dev->scheme = OMAP_I2C_SCHEME(rev);
+	//dev->scheme = OMAP_I2C_SCHEME(rev);
+#if 0
 	switch (dev->scheme) {
 	case OMAP_I2C_SCHEME_0:
+		printk("Pradeep: In Scheme 0\n");
 		dev->regs = (u8 *)reg_map_ip_v1;
 		dev->rev = omap_i2c_read_reg(dev, OMAP_I2C_REV_REG);
 		minor = OMAP_I2C_REV_SCHEME_0_MAJOR(dev->rev);
 		major = OMAP_I2C_REV_SCHEME_0_MAJOR(dev->rev);
 		break;
 	case OMAP_I2C_SCHEME_1:
+		printk("Pradeep: In Scheme 1\n");
 		/* FALLTHROUGH */
 	default:
+#endif
 		dev->regs = (u8 *)reg_map_ip_v2;
 		rev = (rev << 16) |
 			omap_i2c_read_reg(dev, OMAP_I2C_IP_V2_REVNB_LO);
 		minor = OMAP_I2C_REV_SCHEME_1_MINOR(rev);
 		major = OMAP_I2C_REV_SCHEME_1_MAJOR(rev);
 		dev->rev = rev;
-	}
+	//}
 
+#if 0
 	dev->errata = 0;
-
 	if (dev->rev >= OMAP_I2C_REV_ON_2430 &&
 			dev->rev < OMAP_I2C_REV_ON_4430_PLUS)
+	{
+		printk("Pradeep: In Errara I207\n");
 		dev->errata |= I2C_OMAP_ERRATA_I207;
+	}
 
-	if (dev->rev <= OMAP_I2C_REV_ON_3430_3530)
+	if (dev->rev <= OMAP_I2C_REV_ON_3430_3530) {
+		printk("Pradeep: In Errara I462\n");
 		dev->errata |= I2C_OMAP_ERRATA_I462;
+	}
+#endif
 
-	if (!(dev->flags & OMAP_I2C_FLAG_NO_FIFO)) {
+	//if (!(dev->flags & OMAP_I2C_FLAG_NO_FIFO)) {
 		u16 s;
+		//printk("Pradeep: In no FIFO\n");
 
 		/* Set up the fifo size - Get total size */
 		s = (omap_i2c_read_reg(dev, OMAP_I2C_BUFSTAT_REG) >> 14) & 0x3;
@@ -1186,27 +1205,40 @@ omap_i2c_probe(struct platform_device *pdev)
 		 */
 
 		dev->fifo_size = (dev->fifo_size / 2);
-
+#if 0
 		if (dev->rev < OMAP_I2C_REV_ON_3630)
+		{
+			printk("Pradeep: In Errara hw bug\n");
 			dev->b_hw = 1; /* Enable hardware fixes */
+		}
 
 		/* calculate wakeup latency constraint for MPU */
 		if (dev->set_mpu_wkup_lat != NULL)
+		{
+			printk("Pradeep: Wake up latency");
 			dev->latency = (1000000 * dev->fifo_size) /
 				       (1000 * dev->speed / 8);
-	}
+		}
+#endif
+	//}
 
 	/* reset ASAP, clearing any IRQs */
 	omap_i2c_init(dev);
-
+#if 0
 	if (dev->rev < OMAP_I2C_OMAP1_REV_2)
+	{
+		printk("Pradeep: Revision 1\n");
 		r = devm_request_irq(&pdev->dev, dev->irq, omap_i2c_omap1_isr,
 				IRQF_NO_SUSPEND, pdev->name, dev);
-	else
+	}
+	else {
+#endif
+		printk("Pradeep: Revision 2\n");
 		r = devm_request_threaded_irq(&pdev->dev, dev->irq,
 				omap_i2c_isr, omap_i2c_isr_thread,
 				IRQF_NO_SUSPEND | IRQF_ONESHOT,
 				pdev->name, dev);
+	//}
 
 	if (r) {
 		dev_err(dev->dev, "failure requesting irq %i\n", dev->irq);
@@ -1262,7 +1294,7 @@ static int omap_i2c_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
-
+#if 1
 #ifdef CONFIG_PM
 #ifdef CONFIG_PM_RUNTIME
 static int omap_i2c_runtime_suspend(struct device *dev)
@@ -1312,6 +1344,7 @@ static struct dev_pm_ops omap_i2c_pm_ops = {
 #else
 #define OMAP_I2C_PM_OPS NULL
 #endif /* CONFIG_PM */
+#endif
 
 static struct platform_driver omap_i2c_driver = {
 	.probe		= omap_i2c_probe,
