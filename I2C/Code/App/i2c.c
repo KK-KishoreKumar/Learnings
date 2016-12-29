@@ -28,13 +28,15 @@ main(void) {
 		exit(1);
 	}
 
-	char buf[10] = {0XAA, 0X55, 0X33, 0XEE};
+	char buf[100] = {0XAA, 0X55, 0XAA, 0X55};
 	float data;
 	char channel;
 	int i;
+	buf[0] = 0;
+	buf[1] = 0;
 	//for(i = 0; i<4; i++) {
 		// Using I2C Read
-		if (write(file,buf,2) != 2) {
+		if (write(file,buf,4) != 4) {
 			/* ERROR HANDLING: i2c transaction failed */
 			printf("Failed to read from the i2c bus.\n");
 			//buffer = g_strerror(errno);
@@ -45,9 +47,19 @@ main(void) {
 			//data = data/4096*5;
 			//channel = ((buf[0] & 0b00110000)>>4);
 			//printf("Channel %02d Data:  %04f\n",channel,data);
-			write(file, buf, 4);
-			read(file, buf, 4);
-			printf("%d %d %d %d\n", buf[0], buf[1], buf[2], buf[3]);
+			sleep(1);
+			buf[0] = 0X00;
+			buf[1] = 0X00;
+			write(file, buf, 2);
+#if 1
+			read(file, buf, 32);
+			for (i = 0; i < 32; i++)
+			{
+				if (!(i % 15))
+					printf("\n");
+				printf("%d\t", buf[i]);
+			}
+#endif
 		}
 	//}
 #if 0

@@ -4,7 +4,7 @@ ifeq ($(KERNELRELEASE),)
 	KERNEL_SOURCE := /home/expert/Elpa/Kernel/linux-3.12.9
 	PWD := $(shell pwd)
 default:
-	$(MAKE) -C $(KERNEL_SOURCE) SUBDIRS=$(PWD) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+	$(MAKE) -C $(KERNEL_SOURCE) SUBDIRS=$(PWD) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CFLAGS=-DDEBUG
 
 clean:
 	$(MAKE) -C $(KERNEL_SOURCE) SUBDIRS=$(PWD) clean

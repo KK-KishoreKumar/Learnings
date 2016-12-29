@@ -42,6 +42,11 @@
 #include <linux/slab.h>
 #include <linux/i2c-omap.h>
 #include <linux/pm_runtime.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
+#include <asm/uaccess.h>
+
 
 /* I2C controller revisions */
 #define OMAP_I2C_OMAP1_REV_2		0x20
@@ -214,6 +219,10 @@ struct omap_i2c_dev {
 	u16			syscstate;
 	u16			westate;
 	u16			errata;
+	/* for providing a character device access */
+	dev_t devt;
+	struct cdev cdev;
+	struct class *class;
 };
 
 static const u8 reg_map_ip_v2[] = {
@@ -241,6 +250,8 @@ static const u8 reg_map_ip_v2[] = {
 	[OMAP_I2C_IP_V2_IRQENABLE_SET] = 0x2c,
 	[OMAP_I2C_IP_V2_IRQENABLE_CLR] = 0x30,
 };
+
+static struct class *i2c_class;
 
 static inline void omap_i2c_write_reg(struct omap_i2c_dev *i2c_dev,
 				      int reg, u16 val)
@@ -283,7 +294,6 @@ static int omap_i2c_reset(struct omap_i2c_dev *dev)
 	unsigned long timeout;
 	u16 sysc;
 
-	//if (dev->rev >= OMAP_I2C_OMAP1_REV_2) {
 		sysc = omap_i2c_read_reg(dev, OMAP_I2C_SYSC_REG);
 
 		/* Disable I2C controller before soft reset */
@@ -434,11 +444,6 @@ static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
 	}
 
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
-
-	/* calculate wakeup latency constraint for MPU */
-	if (dev->set_mpu_wkup_lat != NULL)
-		dev->latency = (1000000 * dev->threshold) /
-			(1000 * dev->speed / 8);
 }
 
 /*
@@ -550,12 +555,13 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	r = omap_i2c_wait_for_bb(dev);
 	if (r < 0)
+	{
+		printk("Error r = %d\n", r);
 		goto out;
-
-	if (dev->set_mpu_wkup_lat != NULL)
-		dev->set_mpu_wkup_lat(dev->dev, dev->latency);
+	}
 
 	for (i = 0; i < num; i++) {
+		printk("Sending Message\n");
 		r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
 		if (r != 0)
 			break;
@@ -563,11 +569,9 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	if (r == 0)
 		r = num;
+	printk("r = %d\n", r);
 
 	omap_i2c_wait_for_bb(dev);
-
-	if (dev->set_mpu_wkup_lat != NULL)
-		dev->set_mpu_wkup_lat(dev->dev, -1);
 
 out:
 	pm_runtime_mark_last_busy(dev->dev);
@@ -688,6 +692,7 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		}
 
 		dev_dbg(dev->dev, "IRQ (ISR = 0x%04x)\n", stat);
+		printk("IRQ (ISR = 0x%04x\n", stat);
 		if (count++ == 100) {
 			dev_warn(dev->dev, "Too much work in one IRQ\n");
 			break;
@@ -798,6 +803,80 @@ out:
 	return IRQ_HANDLED;
 }
 
+static ssize_t my_read(struct file* f, char *buf, size_t count, loff_t *f_pos)
+{
+	struct i2c_msg msg;
+	char *tmp;
+	struct omap_i2c_dev *dev = (struct omap_i2c_dev *)(f->private_data);
+	struct i2c_adapter *adap = &dev->adapter;
+	int ret;
+
+	if (count > 8192)
+		count = 8192;
+
+	tmp = kmalloc(count, GFP_KERNEL);
+	if (tmp == NULL)
+		return -ENOMEM;
+
+	msg.addr = 0x50; //client->addr;
+	msg.flags = 0; //client->flags & I2C_M_TEN;
+	msg.flags |= I2C_M_RD;
+	msg.len = count;
+	msg.buf = tmp;
+	printk("Invoking Transfer\n");
+	ret = omap_i2c_xfer(adap, &msg, 1); 
+	if (ret >= 0)
+		ret = copy_to_user(buf, tmp, count) ? -EFAULT : ret;
+	kfree(tmp);
+	return ret;
+}
+
+static ssize_t my_write(struct file* f, const char *buf, size_t count, loff_t *f_pos)
+{
+	struct omap_i2c_dev *dev = (struct omap_i2c_dev *)(f->private_data);
+	struct i2c_adapter *adap = &dev->adapter;
+	char *tmp;
+	struct i2c_msg msg;
+	int ret;
+
+	tmp = memdup_user(buf, count);
+	if (IS_ERR(tmp))
+		return PTR_ERR(tmp);
+	msg.addr = 0x50; //client->addr;
+	msg.flags = 0; //client->flags & I2C_M_TEN;
+	msg.len = count;
+	msg.buf = tmp;
+	ret = omap_i2c_xfer(adap, &msg, 1); 
+	kfree(tmp);
+	return (ret == 1 ? count : ret);
+}
+
+static int my_open(struct inode *i, struct file *f)
+{
+	struct i2c_adapter *adap;
+	struct omap_i2c_dev *dev = container_of(i->i_cdev, struct omap_i2c_dev, cdev);
+	f->private_data = dev;
+
+#if 0
+	adap = dev->adapter;
+	client = kzalloc(sizeof(*client), GFP_KERNEL);
+	if (!client) {
+		i2c_put_adapter(adap);
+		return -ENOMEM;
+	}
+	snprintf(client->name, 20, "my_i2c%d", adap->nr);
+
+	client->adapter = adap;
+#endif
+	return 0;
+}
+
+static int my_close(struct inode *i, struct file *file)
+{
+	return 0;
+}
+
+
 static const struct i2c_algorithm omap_i2c_algo = {
 	.master_xfer	= omap_i2c_xfer,
 	.functionality	= omap_i2c_func,
@@ -826,6 +905,13 @@ static const struct of_device_id omap_i2c_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, omap_i2c_of_match);
 #endif
+
+struct file_operations fops = {
+	.open = my_open,
+	.release = my_close,
+	.read = my_read,
+	.write = my_write,
+};
 
 static int
 omap_i2c_probe(struct platform_device *pdev)
@@ -860,6 +946,7 @@ omap_i2c_probe(struct platform_device *pdev)
 
 	match = of_match_device(of_match_ptr(omap_i2c_of_match), &pdev->dev);
 	if (match) {
+		printk("Pradeep: Using match\n");
 		u32 freq = 100000; /* default to 100000 Hz */
 
 		pdata = match->data;
@@ -869,6 +956,7 @@ omap_i2c_probe(struct platform_device *pdev)
 		/* convert DT freq value in Hz into kHz for speed */
 		dev->speed = freq / 1000;
 	} else if (pdata != NULL) {
+		printk("Pradeep: Using pdate\n");
 		dev->speed = pdata->clkrate;
 		dev->flags = pdata->flags;
 		dev->set_mpu_wkup_lat = pdata->set_mpu_wkup_lat;
@@ -944,6 +1032,35 @@ omap_i2c_probe(struct platform_device *pdev)
 		dev_err(dev->dev, "failure adding adapter\n");
 		goto err_unuse_clocks;
 	}
+	int init_result = alloc_chrdev_region(&dev->devt, 0, 1, "i2c_drv");
+
+	if( 0 > init_result )
+	{
+		printk(KERN_ALERT "Device Registration failed\n");
+		return -1;
+	}
+	printk("Major Nr: %d\n", MAJOR(dev->devt));
+
+	
+
+	if(device_create(i2c_class, NULL, dev->devt, NULL, "i2c_drv%d", adap->nr) == NULL)
+	{
+		printk( KERN_ALERT "Device creation failed\n" );
+		//class_destroy(dev->class);
+		unregister_chrdev_region(dev->devt, 1);
+		return -1;
+	}
+
+	cdev_init(&dev->cdev, &fops);
+
+	if(cdev_add(&dev->cdev, dev->devt, 1) == -1)
+	{
+		printk( KERN_ALERT "Device addition failed\n" );
+		device_destroy(dev->class, dev->devt);
+		//class_destroy(dev->class);
+		unregister_chrdev_region(dev->devt, 1 );
+		return -1;
+	}
 
 	//dev_info(dev->dev, "bus %d rev%d.%d at %d kHz\n", adap->nr,
 	//	 major, minor, dev->speed);
@@ -966,6 +1083,9 @@ static int omap_i2c_remove(struct platform_device *pdev)
 {
 	struct omap_i2c_dev	*dev = platform_get_drvdata(pdev);
 	int ret;
+	cdev_del(&dev->cdev);
+	device_destroy(i2c_class, dev->devt);
+	unregister_chrdev_region(dev->devt, 1);
 
 	i2c_del_adapter(&dev->adapter);
 	ret = pm_runtime_get_sync(&pdev->dev);
@@ -1031,18 +1151,24 @@ static struct platform_driver omap_i2c_driver = {
 		.of_match_table = of_match_ptr(omap_i2c_of_match),
 	},
 };
-
 /* I2C may be needed to bring up other drivers */
 static int __init
 omap_i2c_init_driver(void)
 {
+	if ((i2c_class = class_create(THIS_MODULE, "i2cdrv")) == NULL)
+	{
+		printk( KERN_ALERT "Class creation failed\n" );
+		return -1;
+	}
 	return platform_driver_register(&omap_i2c_driver);
 }
-subsys_initcall(omap_i2c_init_driver);
+//subsys_initcall(omap_i2c_init_driver);
+module_init(omap_i2c_init_driver);
 
 static void __exit omap_i2c_exit_driver(void)
 {
 	platform_driver_unregister(&omap_i2c_driver);
+	class_destroy(i2c_class);
 }
 module_exit(omap_i2c_exit_driver);
 
