@@ -264,6 +264,63 @@ static inline u16 omap_i2c_read_reg(struct omap_i2c_dev *i2c_dev, int reg)
 	return __raw_readw(i2c_dev->base + i2c_dev->regs[reg]);
 }
 
+static inline void
+omap_i2c_ack_stat(struct omap_i2c_dev *dev, u16 stat)
+{
+	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, stat);
+}
+/*
+ * Waiting on Bus Busy
+ */
+static int omap_i2c_wait_for_bb(struct omap_i2c_dev *dev)
+{
+	unsigned long timeout;
+
+	timeout = jiffies + OMAP_I2C_TIMEOUT;
+	while (omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG) & OMAP_I2C_STAT_BB) {
+		if (time_after(jiffies, timeout)) {
+			printk(dev->dev, "timeout waiting for bus ready\n");
+			return -ETIMEDOUT;
+		}
+		msleep(1);
+	}
+
+	return 0;
+}
+
+static void flush_fifo(struct omap_i2c_dev *dev)
+{
+	unsigned long timeout;
+	u32 status;
+
+	timeout = jiffies + OMAP_I2C_TIMEOUT;
+	while ((status = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG)) & OMAP_I2C_STAT_RRDY) {
+		omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
+		omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RRDY);
+		if (time_after(jiffies, timeout)) {
+			dev_warn(dev->dev, "timeout waiting for bus ready\n");
+			break;
+		}
+		msleep(1);
+	}
+
+#if 0
+
+	while (1) {
+		omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG)	
+		status = readw(&i2c_base->stat);
+		if (stat == I2C_STAT_RRDY) {
+			readb(&i2c_base->data);
+			writew(I2C_STAT_RRDY, &i2c_base->stat);
+			udelay(1000);
+		} else
+			break;
+
+
+	}
+#endif
+}
+
 static void __omap_i2c_init(struct omap_i2c_dev *dev)
 {
 
@@ -280,14 +337,69 @@ static void __omap_i2c_init(struct omap_i2c_dev *dev)
 
 	/* Take the I2C module out of reset: */
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
-
+#if 0
 	/*
 	 * Don't write to this register if the IE state is 0 as it can
 	 * cause deadlock.
 	 */
 	if (dev->iestate)
 		omap_i2c_write_reg(dev, OMAP_I2C_IE_REG, dev->iestate);
+#endif
+	flush_fifo(dev);
+	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, 0XFFFF);
+	omap_i2c_wait_for_bb(dev);
+	
 }
+
+static u16 wait_for_event(struct omap_i2c_dev *dev)
+{
+	//int timeout = OMAP_I2C_TIMEOUT;
+	unsigned long timeout = jiffies + OMAP_I2C_TIMEOUT;
+	u16 status;
+#if 0
+	do {
+		udelay(1000);
+#if defined(CONFIG_OMAP243X) || defined(CONFIG_OMAP34XX)
+		status = readw(&i2c_base->stat);
+#else
+		/* Read RAW status */
+		status = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
+#endif
+	} while (!(status &
+				(OMAP_I2C_STAT_ROVR | OMAP_I2C_STAT_XUDF | OMAP_I2C_STAT_XRDY |
+				 OMAP_I2C_STAT_RRDY | OMAP_I2C_STAT_ARDY | OMAP_I2C_STAT_NACK |
+				 OMAP_I2C_STAT_AL)) && timeout--);
+
+	if (timeout <= 0) {
+		printk("Timed out in wait_for_event: status=%04x\n",
+				status);
+		/*
+		 *                  * If status is still 0 here, probably the bus pads have
+		 *                                   * not been configured for I2C, and/or pull-ups are missing.
+		 *                                                    */
+		omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG,0xFFFF);
+		status = 0;
+	}
+
+	return status;
+#endif
+
+#if 1
+	while (!((status = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG)) & (OMAP_I2C_STAT_ROVR | OMAP_I2C_STAT_XUDF | OMAP_I2C_STAT_XRDY | OMAP_I2C_STAT_RRDY | OMAP_I2C_STAT_ARDY | OMAP_I2C_STAT_NACK | OMAP_I2C_STAT_AL)))
+	{
+		if (time_after(jiffies, timeout))
+		{
+			printk("time-out waiting for bus ready\n");
+			//omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, 0XFFFF);
+			return 0;
+		}
+		mdelay(1);
+	}
+	return status;
+#endif
+
+}
+
 
 static int omap_i2c_reset(struct omap_i2c_dev *dev)
 {
@@ -381,12 +493,13 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 	}
 	scll = (hsscll << OMAP_I2C_SCLL_HSSCLL) | fsscll;
 	sclh = (hssclh << OMAP_I2C_SCLH_HSSCLH) | fssclh;
-
+	dev->iestate = 0;
+#if 0
 	dev->iestate = (OMAP_I2C_IE_XRDY | OMAP_I2C_IE_RRDY |
 			OMAP_I2C_IE_ARDY | OMAP_I2C_IE_NACK |
 			OMAP_I2C_IE_AL)  | ((dev->fifo_size) ?
 				(OMAP_I2C_IE_RDR | OMAP_I2C_IE_XDR) : 0);
-
+#endif
 	dev->pscstate = psc;
 	dev->scllstate = scll;
 	dev->sclhstate = sclh;
@@ -396,24 +509,7 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 	return 0;
 }
 
-/*
- * Waiting on Bus Busy
- */
-static int omap_i2c_wait_for_bb(struct omap_i2c_dev *dev)
-{
-	unsigned long timeout;
 
-	timeout = jiffies + OMAP_I2C_TIMEOUT;
-	while (omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG) & OMAP_I2C_STAT_BB) {
-		if (time_after(jiffies, timeout)) {
-			dev_warn(dev->dev, "timeout waiting for bus ready\n");
-			return -ETIMEDOUT;
-		}
-		msleep(1);
-	}
-
-	return 0;
-}
 
 static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
 {
@@ -444,6 +540,152 @@ static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
 	}
 
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
+}
+
+/*
+ * Low level master read/write transaction.
+ */
+static int omap_i2c_read_msg(struct i2c_adapter *adap,
+			     struct i2c_msg *msg, int stop)
+{
+	struct omap_i2c_dev *dev = i2c_get_adapdata(adap);
+	unsigned long timeout;
+	u16 w;
+	u16 status;
+
+	dev_dbg(dev->dev, "addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
+		msg->addr, msg->len, msg->flags, stop);
+
+	if (msg->len == 0)
+		return -EINVAL;
+
+	dev->receiver = !!(msg->flags & I2C_M_RD);
+	//omap_i2c_resize_fifo(dev, msg->len, dev->receiver);
+
+	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
+
+	/* REVISIT: Could the STB bit of I2C_CON be used with probing? */
+	dev->buf = msg->buf;
+	dev->buf_len = msg->len;
+
+	/* make sure writes to dev->buf_len are ordered */
+	barrier();
+
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 2);
+#if 0
+	/* Clear the FIFO Buffers */
+	w = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
+	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
+	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
+#endif
+
+	//INIT_COMPLETION(dev->cmd_complete);
+	dev->cmd_err = 0;
+
+	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT;
+
+	/* High speed configuration */
+	if (dev->speed > 400)
+		w |= OMAP_I2C_CON_OPMODE_HS;
+
+	if (msg->flags & I2C_M_STOP)
+		stop = 1;
+	if (msg->flags & I2C_M_TEN)
+		w |= OMAP_I2C_CON_XA;
+	//if (!(msg->flags & I2C_M_RD))
+		w |= OMAP_I2C_CON_TRX;
+
+		w |= OMAP_I2C_CON_STP;
+
+	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
+	char a = 2;
+	unsigned int short adr = 0x0050;
+	int i2c_error = 0;
+	while (1) {
+		status = wait_for_event(dev);
+		if (a) {
+			if (status & OMAP_I2C_STAT_XRDY)
+			{
+				printk("Got it\n");
+				a--;
+				omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, ((adr >> (8 * a)) & 0xff));
+			}
+			else {
+				printk("Here status = %x\n", status);
+			}
+		}
+		if (status & OMAP_I2C_STAT_ARDY) {
+			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ARDY);
+			break;
+		}
+	}
+	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, dev->buf_len);
+	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP;
+	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
+	while (1) {
+		status = wait_for_event(dev);
+		if (status == OMAP_I2C_STAT_XRDY) {
+			i2c_error = 2;
+			printk("i2c_read (data phase): pads on bus probably not configured (status=0x%x)\n",
+					status);
+			goto rd_exit;
+		}
+		if (status == 0 || (status & OMAP_I2C_STAT_NACK)) {
+			i2c_error = 1;
+			goto rd_exit;
+		}
+		if (status & OMAP_I2C_STAT_RRDY) {
+			*dev->buf++ = omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
+			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RRDY);
+			//writew(I2C_STAT_RRDY, &i2c_base->stat);
+		}
+		if (status & OMAP_I2C_STAT_ARDY) {
+			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ARDY);
+			break;
+		}
+	}
+rd_exit:
+	flush_fifo(dev);
+	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, 0XFFFF);
+	return i2c_error;
+
+#if 0
+	/*
+	 * REVISIT: We should abort the transfer on signals, but the bus goes
+	 * into arbitration and we're currently unable to recover from it.
+	 */
+	timeout = wait_for_completion_timeout(&dev->cmd_complete,
+						OMAP_I2C_TIMEOUT);
+	if (timeout == 0) {
+		dev_err(dev->dev, "controller timed out\n");
+		omap_i2c_reset(dev);
+		__omap_i2c_init(dev);
+		return -ETIMEDOUT;
+	}
+
+	if (likely(!dev->cmd_err))
+		return 0;
+
+	/* We have an error */
+	if (dev->cmd_err & (OMAP_I2C_STAT_AL | OMAP_I2C_STAT_ROVR |
+			    OMAP_I2C_STAT_XUDF)) {
+		omap_i2c_reset(dev);
+		__omap_i2c_init(dev);
+		return -EIO;
+	}
+
+	if (dev->cmd_err & OMAP_I2C_STAT_NACK) {
+		if (msg->flags & I2C_M_IGNORE_NAK)
+			return 0;
+
+		w = omap_i2c_read_reg(dev, OMAP_I2C_CON_REG);
+		w |= OMAP_I2C_CON_STP;
+		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
+		return -EREMOTEIO;
+	}
+	return -EIO;
+#endif
 }
 
 /*
@@ -562,7 +804,8 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	for (i = 0; i < num; i++) {
 		printk("Sending Message\n");
-		r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
+		r = omap_i2c_read_msg(adap, &msgs[i], 1);
+		//r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
 		if (r != 0)
 			break;
 	}
@@ -593,11 +836,7 @@ omap_i2c_complete_cmd(struct omap_i2c_dev *dev, u16 err)
 	complete(&dev->cmd_complete);
 }
 
-static inline void
-omap_i2c_ack_stat(struct omap_i2c_dev *dev, u16 stat)
-{
-	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, stat);
-}
+
 
 
 static void omap_i2c_receive_data(struct omap_i2c_dev *dev, u8 num_bytes,
@@ -990,6 +1229,7 @@ omap_i2c_probe(struct platform_device *pdev)
 		rev = (rev << 16) |
 			omap_i2c_read_reg(dev, OMAP_I2C_IP_V2_REVNB_LO);
 		dev->rev = rev;
+#if 0
 		u16 s;
 
 		/* Set up the fifo size - Get total size */
@@ -1003,9 +1243,11 @@ omap_i2c_probe(struct platform_device *pdev)
 		 */
 
 		dev->fifo_size = (dev->fifo_size / 2);
+#endif
 
 	/* reset ASAP, clearing any IRQs */
 	omap_i2c_init(dev);
+#if 0
 		r = devm_request_threaded_irq(&pdev->dev, dev->irq,
 				omap_i2c_isr, omap_i2c_isr_thread,
 				IRQF_NO_SUSPEND | IRQF_ONESHOT,
@@ -1015,6 +1257,7 @@ omap_i2c_probe(struct platform_device *pdev)
 		dev_err(dev->dev, "failure requesting irq %i\n", dev->irq);
 		goto err_unuse_clocks;
 	}
+#endif
 
 	adap = &dev->adapter;
 	i2c_set_adapdata(adap, dev);
