@@ -47,16 +47,6 @@
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
 
-
-/* I2C controller revisions */
-#define OMAP_I2C_OMAP1_REV_2		0x20
-
-/* I2C controller revisions present on specific hardware */
-#define OMAP_I2C_REV_ON_2430		0x00000036
-#define OMAP_I2C_REV_ON_3430_3530	0x0000003C
-#define OMAP_I2C_REV_ON_3630		0x00000040
-#define OMAP_I2C_REV_ON_4430_PLUS	0x50400002
-
 /* timeout waiting for the controller to respond */
 #define OMAP_I2C_TIMEOUT (msecs_to_jiffies(1000))
 
@@ -154,18 +144,6 @@ enum {
 #define OMAP_I2C_SCLL_HSSCLL	8
 #define OMAP_I2C_SCLH_HSSCLH	8
 
-/* I2C System Test Register (OMAP_I2C_SYSTEST): */
-#ifdef DEBUG
-#define OMAP_I2C_SYSTEST_ST_EN		(1 << 15)	/* System test enable */
-#define OMAP_I2C_SYSTEST_FREE		(1 << 14)	/* Free running mode */
-#define OMAP_I2C_SYSTEST_TMODE_MASK	(3 << 12)	/* Test mode select */
-#define OMAP_I2C_SYSTEST_TMODE_SHIFT	(12)		/* Test mode select */
-#define OMAP_I2C_SYSTEST_SCL_I		(1 << 3)	/* SCL line sense in */
-#define OMAP_I2C_SYSTEST_SCL_O		(1 << 2)	/* SCL line drive out */
-#define OMAP_I2C_SYSTEST_SDA_I		(1 << 1)	/* SDA line sense in */
-#define OMAP_I2C_SYSTEST_SDA_O		(1 << 0)	/* SDA line drive out */
-#endif
-
 /* OCP_SYSSTATUS bit definitions */
 #define SYSS_RESETDONE_MASK		(1 << 0)
 
@@ -178,10 +156,6 @@ enum {
 
 #define SYSC_IDLEMODE_SMART		0x2
 #define SYSC_CLOCKACTIVITY_FCLK		0x2
-
-/* Errata definitions */
-#define I2C_OMAP_ERRATA_I207		(1 << 0)
-#define I2C_OMAP_ERRATA_I462		(1 << 1)
 
 #define OMAP_I2C_IP_V2_INTERRUPTS_MASK	0x6FFF
 
@@ -275,7 +249,6 @@ static void __omap_i2c_init(struct omap_i2c_dev *dev)
 	/* SCL low and high time values */
 	omap_i2c_write_reg(dev, OMAP_I2C_SCLL_REG, dev->scllstate);
 	omap_i2c_write_reg(dev, OMAP_I2C_SCLH_REG, dev->sclhstate);
-	//if (dev->rev >= OMAP_I2C_REV_ON_3430_3530)
 		omap_i2c_write_reg(dev, OMAP_I2C_WE_REG, dev->westate);
 
 	/* Take the I2C module out of reset: */
@@ -294,32 +267,31 @@ static int omap_i2c_reset(struct omap_i2c_dev *dev)
 	unsigned long timeout;
 	u16 sysc;
 
-		sysc = omap_i2c_read_reg(dev, OMAP_I2C_SYSC_REG);
+	sysc = omap_i2c_read_reg(dev, OMAP_I2C_SYSC_REG);
 
-		/* Disable I2C controller before soft reset */
-		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG,
+	/* Disable I2C controller before soft reset */
+	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG,
 			omap_i2c_read_reg(dev, OMAP_I2C_CON_REG) &
-				~(OMAP_I2C_CON_EN));
+			~(OMAP_I2C_CON_EN));
 
-		omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, SYSC_SOFTRESET_MASK);
-		/* For some reason we need to set the EN bit before the
-		 * reset done bit gets set. */
-		timeout = jiffies + OMAP_I2C_TIMEOUT;
-		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
-		while (!(omap_i2c_read_reg(dev, OMAP_I2C_SYSS_REG) &
-			 SYSS_RESETDONE_MASK)) {
-			if (time_after(jiffies, timeout)) {
-				dev_warn(dev->dev, "timeout waiting "
-						"for controller reset\n");
-				return -ETIMEDOUT;
-			}
-			msleep(1);
+	omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, SYSC_SOFTRESET_MASK);
+	/* For some reason we need to set the EN bit before the
+	 * reset done bit gets set. */
+	timeout = jiffies + OMAP_I2C_TIMEOUT;
+	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
+	while (!(omap_i2c_read_reg(dev, OMAP_I2C_SYSS_REG) &
+				SYSS_RESETDONE_MASK)) {
+		if (time_after(jiffies, timeout)) {
+			dev_warn(dev->dev, "timeout waiting "
+					"for controller reset\n");
+			return -ETIMEDOUT;
 		}
+		msleep(1);
+	}
 
-		/* SYSC register is cleared by the reset; rewrite it */
-		omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, sysc);
+	/* SYSC register is cleared by the reset; rewrite it */
+	omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, sysc);
 
-	//}
 	return 0;
 }
 
@@ -430,6 +402,7 @@ static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
 	 */
 
 	dev->threshold = clamp(size, (u8) 1, dev->fifo_size);
+	printk("thr = %d\n", dev->threshold);
 
 	buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 
@@ -456,7 +429,7 @@ static int omap_i2c_xfer_msg(struct i2c_adapter *adap,
 	unsigned long timeout;
 	u16 w;
 
-	dev_dbg(dev->dev, "addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
+	printk("addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
 		msg->addr, msg->len, msg->flags, stop);
 
 	if (msg->len == 0)
@@ -480,6 +453,8 @@ static int omap_i2c_xfer_msg(struct i2c_adapter *adap,
 	w = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
+	w = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
+	printk("Stat reg = 0x%04x\n", w);
 
 	INIT_COMPLETION(dev->cmd_complete);
 	dev->cmd_err = 0;
@@ -492,8 +467,6 @@ static int omap_i2c_xfer_msg(struct i2c_adapter *adap,
 
 	if (msg->flags & I2C_M_STOP)
 		stop = 1;
-	if (msg->flags & I2C_M_TEN)
-		w |= OMAP_I2C_CON_XA;
 	if (!(msg->flags & I2C_M_RD))
 		w |= OMAP_I2C_CON_TRX;
 
@@ -561,7 +534,7 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	}
 
 	for (i = 0; i < num; i++) {
-		printk("Sending Message\n");
+		//printk("stat = %d, mask = %d\n", stat, mask);
 		r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
 		if (r != 0)
 			break;
@@ -661,6 +634,7 @@ omap_i2c_isr(int irq, void *dev_id)
 		ret = IRQ_WAKE_THREAD;
 
 	spin_unlock(&dev->lock);
+	printk("stat = %d, mask = %d\n", stat, mask);
 
 	return ret;
 }
@@ -679,6 +653,7 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		bits = omap_i2c_read_reg(dev, OMAP_I2C_IE_REG);
 		stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
 		stat &= bits;
+		printk("ISR stat = %d, mask = %d\n", stat, bits);
 
 		/* If we're in receiver mode, ignore XDR/XRDY */
 		if (dev->receiver)
@@ -781,14 +756,14 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		}
 
 		if (stat & OMAP_I2C_STAT_ROVR) {
-			dev_err(dev->dev, "Receive overrun\n");
+			printk("Receive overrun\n");
 			err |= OMAP_I2C_STAT_ROVR;
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ROVR);
 			break;
 		}
 
 		if (stat & OMAP_I2C_STAT_XUDF) {
-			dev_err(dev->dev, "Transmit underflow\n");
+			printk("Transmit Underflow\n");
 			err |= OMAP_I2C_STAT_XUDF;
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XUDF);
 			break;
@@ -995,6 +970,7 @@ omap_i2c_probe(struct platform_device *pdev)
 		/* Set up the fifo size - Get total size */
 		s = (omap_i2c_read_reg(dev, OMAP_I2C_BUFSTAT_REG) >> 14) & 0x3;
 		dev->fifo_size = 0x8 << s;
+		printk("Fifo size = %d\n", dev->fifo_size);
 
 		/*
 		 * Set up notification threshold as half the total available

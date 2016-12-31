@@ -338,7 +338,7 @@ static void __omap_i2c_init(struct omap_i2c_dev *dev)
 
 	/* Take the I2C module out of reset: */
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
-#if 0
+#if 1
 	/*
 	 * Don't write to this register if the IE state is 0 as it can
 	 * cause deadlock.
@@ -553,8 +553,8 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 	unsigned long timeout;
 	u16 w;
 	u16 status;
-	spinlock_t spn;
-	spin_lock_init(&spn);
+	//spinlock_t spn;
+	//spin_lock_init(&spn);
 
 	dev_dbg(dev->dev, "addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
 		msg->addr, msg->len, msg->flags, stop);
@@ -563,7 +563,7 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 		return -EINVAL;
 
 	dev->receiver = !!(msg->flags & I2C_M_RD);
-	//omap_i2c_resize_fifo(dev, msg->len, dev->receiver);
+	omap_i2c_resize_fifo(dev, 2, 0);
 
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
 
@@ -574,6 +574,7 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 	/* make sure writes to dev->buf_len are ordered */
 	barrier();
 
+	//omap_i2c_resize_fifo(dev, 2, 0);
 	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 2);
 #if 0
 	/* Clear the FIFO Buffers */
@@ -600,21 +601,23 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 
 		w |= OMAP_I2C_CON_STP;
 	char a = 2;
-	int k = 4;
-	unsigned int short adr = 0x0050;
+	int k = 10;
+	unsigned int short adr = 0x0000;
 	int i2c_error = 0;
-	spin_lock(&spn);
+	//barrier();
+	//spin_lock(&spn);
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
 	status = wait_for_event(dev);
 	while (k--) {
 
+		printk("status = %0X\n", status);
 		if (a) {
 			if (status & OMAP_I2C_STAT_XRDY)
 			{
-				printk("Got it\n");
 				a--;
 				omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, ((adr >> (8 * a)) & 0xff));
-				spin_unlock(&spn);
+				omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XRDY);
+				//spin_unlock(&spn);
 				continue;
 			}
 			else {
@@ -622,13 +625,18 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 			}
 		}
 		if (status & OMAP_I2C_STAT_ARDY) {
+			printk("ARDY\n");
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ARDY);
 			break;
 		}
 		status = wait_for_event(dev);
 	}
 	if (k <= 0)
+	{
+		printk("Timed out\n");
 		return -1;
+	}
+	omap_i2c_resize_fifo(dev, dev->buf_len, 0);
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
 	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, dev->buf_len);
 	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP;
@@ -1239,7 +1247,7 @@ omap_i2c_probe(struct platform_device *pdev)
 		rev = (rev << 16) |
 			omap_i2c_read_reg(dev, OMAP_I2C_IP_V2_REVNB_LO);
 		dev->rev = rev;
-#if 0
+#if 1
 		u16 s;
 
 		/* Set up the fifo size - Get total size */
