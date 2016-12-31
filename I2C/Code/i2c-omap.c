@@ -45,6 +45,7 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
+#include <linux/spinlock.h>
 #include <asm/uaccess.h>
 
 
@@ -494,7 +495,7 @@ static int omap_i2c_init(struct omap_i2c_dev *dev)
 	scll = (hsscll << OMAP_I2C_SCLL_HSSCLL) | fsscll;
 	sclh = (hssclh << OMAP_I2C_SCLH_HSSCLH) | fssclh;
 	dev->iestate = 0;
-#if 0
+#if 1
 	dev->iestate = (OMAP_I2C_IE_XRDY | OMAP_I2C_IE_RRDY |
 			OMAP_I2C_IE_ARDY | OMAP_I2C_IE_NACK |
 			OMAP_I2C_IE_AL)  | ((dev->fifo_size) ?
@@ -552,6 +553,8 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 	unsigned long timeout;
 	u16 w;
 	u16 status;
+	spinlock_t spn;
+	spin_lock_init(&spn);
 
 	dev_dbg(dev->dev, "addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
 		msg->addr, msg->len, msg->flags, stop);
@@ -596,19 +599,23 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 		w |= OMAP_I2C_CON_TRX;
 
 		w |= OMAP_I2C_CON_STP;
-
-	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
 	char a = 2;
+	int k = 4;
 	unsigned int short adr = 0x0050;
 	int i2c_error = 0;
-	while (1) {
-		status = wait_for_event(dev);
+	spin_lock(&spn);
+	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
+	status = wait_for_event(dev);
+	while (k--) {
+
 		if (a) {
 			if (status & OMAP_I2C_STAT_XRDY)
 			{
 				printk("Got it\n");
 				a--;
 				omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, ((adr >> (8 * a)) & 0xff));
+				spin_unlock(&spn);
+				continue;
 			}
 			else {
 				printk("Here status = %x\n", status);
@@ -618,7 +625,10 @@ static int omap_i2c_read_msg(struct i2c_adapter *adap,
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ARDY);
 			break;
 		}
+		status = wait_for_event(dev);
 	}
+	if (k <= 0)
+		return -1;
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
 	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, dev->buf_len);
 	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP;
