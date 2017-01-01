@@ -20,16 +20,16 @@ main(void) {
 		exit(1);
 	}
 	//char buf[32] = {0X00, 0X50, 0XAA, 0X55, 0X33, 0XEE};
-	char buf[32] = {0X00, 0x50, 0xAA, 0X55, 0X33, 0XAA};
+	char buf[32] = {0X00, 0x50, 0xAB, 0X60, 0X34, 0XAC};
 	float data;
 	char channel;
 	int i;
-	// Write the eeprom offset and data
-	//if (write(file,buf,6) == 6) {
-	//	sleep(1);
+	 //Write the eeprom offset and data
+	if (write(file,buf,6) == 6) {
+		sleep(1);
 		// Write the offset for reading
-	//	write(file, buf, 2);
-#if 0
+		//write(file, buf, 2);
+#if 1
 		for (i = 0; i < 32; i++)
 			buf[i] = 0;
 #endif
@@ -41,7 +41,7 @@ main(void) {
 				printf("\n");
 			printf("%d\t", buf[i]);
 		}
-#if 0
+#if 1
 	} else {
 		printf("Failed to write the i2c bus.\n");
 		printf("\n\n");
