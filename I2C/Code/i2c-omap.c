@@ -174,28 +174,16 @@ struct omap_i2c_dev {
 	struct device		*dev;
 	void __iomem		*base;		/* virtual */
 	int			irq;
-	int			reg_shift;      /* bit shift for I2C register addresses */
-	struct completion	cmd_complete;
-	struct resource		*ioarea;
-	u32			latency;	/* maximum mpu wkup latency */
-	void			(*set_mpu_wkup_lat)(struct device *dev,
-						    long latency);
 	u32			speed;		/* Speed of bus in kHz */
 	u32			flags;
-	u16			scheme;
-	u16			cmd_err;
 	u8			*buf;
 	u8			*regs;
 	size_t			buf_len;
-	struct i2c_adapter	adapter;
 	u8			threshold;
 	u8			fifo_size;	/* use as flag and value
 						 * fifo_size==0 implies no fifo
 						 * if set, should be trsh+1
 						 */
-	u32			rev;
-	unsigned		b_hw:1;		/* bad h/w fixes */
-	unsigned		receiver:1;	/* true when we're in receiver mode */
 	u16			iestate;	/* Saved interrupt register */
 	u16			pscstate;
 	u16			scllstate;
@@ -539,7 +527,6 @@ static int omap_i2c_write_msg(struct omap_i2c_dev *dev,
 	if (msg->len == 0)
 		return -EINVAL;
 
-	dev->receiver = 1;
 	omap_i2c_resize_fifo(dev, msg->len, 0);
 
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
@@ -556,8 +543,6 @@ static int omap_i2c_write_msg(struct omap_i2c_dev *dev,
 	w = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
-
-	dev->cmd_err = 0;
 
 	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT;
 
@@ -637,7 +622,6 @@ static int omap_i2c_read_msg(struct omap_i2c_dev *dev,
 	if (msg->len == 0)
 		return -EINVAL;
 
-	dev->receiver = !!(msg->flags & I2C_M_RD);
 	omap_i2c_resize_fifo(dev, 2, 0);
 
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
@@ -654,8 +638,6 @@ static int omap_i2c_read_msg(struct omap_i2c_dev *dev,
 	w = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
-
-	dev->cmd_err = 0;
 
 	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT;
 
@@ -890,7 +872,6 @@ static int omap_i2c_probe(struct platform_device *pdev)
 	int init_result;
 	static int idx = 0;
 	u16 s;
-	u32 rev;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -922,7 +903,6 @@ static int omap_i2c_probe(struct platform_device *pdev)
 	} else if (pdata != NULL) {
 		dev->speed = pdata->clkrate;
 		dev->flags = pdata->flags;
-		dev->set_mpu_wkup_lat = pdata->set_mpu_wkup_lat;
 	}
 
 	dev->dev = &pdev->dev;
@@ -932,18 +912,7 @@ static int omap_i2c_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dev);
 
-	/*
-	 * Read the Rev hi bit-[15:14] ie scheme this is 1 indicates ver2.
-	 * On omap1/3/2 Offset 4 is IE Reg the bit [15:14] is 0 at reset.
-	 * Also since the omap_i2c_read_reg uses reg_map_ip_* a
-	 * raw_readw is done.
-	 */
-	rev = __raw_readw(dev->base + 0x04);
-
 	dev->regs = (u8 *)reg_map_ip_v2;
-	rev = (rev << 16) |
-		omap_i2c_read_reg(dev, OMAP_I2C_IP_V2_REVNB_LO);
-	dev->rev = rev;
 
 	/* Set up the fifo size - Get total size */
 	s = (omap_i2c_read_reg(dev, OMAP_I2C_BUFSTAT_REG) >> 14) & 0x3;
@@ -986,9 +955,6 @@ static int omap_i2c_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-	//dev_info(dev->dev, "bus %d rev%d.%d at %d kHz\n", adap->nr,
-	//	 major, minor, dev->speed);
-
 	return 0;
 }
 
@@ -998,9 +964,6 @@ static int omap_i2c_remove(struct platform_device *pdev)
 	cdev_del(&dev->cdev);
 	device_destroy(i2c_class, dev->devt);
 	unregister_chrdev_region(dev->devt, 1);
-
-	i2c_del_adapter(&dev->adapter);
-
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, 0);
 	return 0;
 }
