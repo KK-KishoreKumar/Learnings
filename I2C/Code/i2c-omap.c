@@ -39,7 +39,6 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/i2c-omap.h>
-#include <linux/pm_runtime.h>
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
@@ -59,8 +58,6 @@
 /* timeout waiting for the controller to respond */
 #define OMAP_I2C_TIMEOUT (msecs_to_jiffies(1000))
 
-/* timeout for pm runtime autosuspend */
-#define OMAP_I2C_PM_TIMEOUT		1000	/* ms */
 
 /* For OMAP3 I2C_IV has changed to I2C_WE (wakeup enable) */
 enum {
@@ -860,10 +857,6 @@ static ssize_t my_read(struct file* f, char *buf, size_t count, loff_t *f_pos)
 	msg.len = count;
 	msg.buf = tmp;
 
-	ret = pm_runtime_get_sync(dev->dev);
-	if (IS_ERR_VALUE(ret))
-		goto out;
-
 	ret = omap_i2c_wait_for_bb(dev);
 	if (ret < 0)
 	{
@@ -881,8 +874,6 @@ static ssize_t my_read(struct file* f, char *buf, size_t count, loff_t *f_pos)
 		ret = copy_to_user(buf, tmp, count) ? -EFAULT : count;
 	kfree(tmp);
 out:
-	pm_runtime_mark_last_busy(dev->dev);
-	pm_runtime_put_autosuspend(dev->dev);
 	return ret;
 
 }
@@ -910,7 +901,6 @@ static int my_open(struct inode *i, struct file *f)
 {
 	struct omap_i2c_dev *dev = container_of(i->i_cdev, struct omap_i2c_dev, cdev);
 	f->private_data = dev;
-
 	return 0;
 }
 
@@ -1010,14 +1000,6 @@ static int omap_i2c_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dev);
 
-	pm_runtime_enable(dev->dev);
-	pm_runtime_set_autosuspend_delay(dev->dev, OMAP_I2C_PM_TIMEOUT);
-	pm_runtime_use_autosuspend(dev->dev);
-
-	r = pm_runtime_get_sync(dev->dev);
-	if (IS_ERR_VALUE(r))
-		goto err_free_mem;
-
 	/*
 	 * Read the Rev hi bit-[15:14] ie scheme this is 1 indicates ver2.
 	 * On omap1/3/2 Offset 4 is IE Reg the bit [15:14] is 0 at reset.
@@ -1075,9 +1057,6 @@ static int omap_i2c_probe(struct platform_device *pdev)
 	//dev_info(dev->dev, "bus %d rev%d.%d at %d kHz\n", adap->nr,
 	//	 major, minor, dev->speed);
 
-	pm_runtime_mark_last_busy(dev->dev);
-	pm_runtime_put_autosuspend(dev->dev);
-
 	return 0;
 err_free_mem:
 
@@ -1093,62 +1072,10 @@ static int omap_i2c_remove(struct platform_device *pdev)
 	unregister_chrdev_region(dev->devt, 1);
 
 	i2c_del_adapter(&dev->adapter);
-	ret = pm_runtime_get_sync(&pdev->dev);
-	if (IS_ERR_VALUE(ret))
-		return ret;
 
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, 0);
-	pm_runtime_put(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
-#if 1
-#ifdef CONFIG_PM
-#ifdef CONFIG_PM_RUNTIME
-static int omap_i2c_runtime_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct omap_i2c_dev *_dev = platform_get_drvdata(pdev);
-	printk("Suspend Invoked\n");
-#if 0
-
-	_dev->iestate = omap_i2c_read_reg(_dev, OMAP_I2C_IE_REG);
-		omap_i2c_write_reg(_dev, OMAP_I2C_IP_V2_IRQENABLE_CLR,
-				   OMAP_I2C_IP_V2_INTERRUPTS_MASK);
-
-		omap_i2c_write_reg(_dev, OMAP_I2C_STAT_REG, _dev->iestate);
-
-		/* Flush posted write */
-		omap_i2c_read_reg(_dev, OMAP_I2C_STAT_REG);
-#endif
-
-	return 0;
-}
-
-static int omap_i2c_runtime_resume(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct omap_i2c_dev *_dev = platform_get_drvdata(pdev);
-	printk("Resume Invoked\n");
-
-	if (!_dev->regs)
-		return 0;
-
-	__omap_i2c_init(_dev);
-
-	return 0;
-}
-#endif /* CONFIG_PM_RUNTIME */
-
-static struct dev_pm_ops omap_i2c_pm_ops = {
-	SET_RUNTIME_PM_OPS(omap_i2c_runtime_suspend,
-			   omap_i2c_runtime_resume, NULL)
-};
-#define OMAP_I2C_PM_OPS (&omap_i2c_pm_ops)
-#else
-#define OMAP_I2C_PM_OPS NULL
-#endif /* CONFIG_PM */
-#endif
 
 static struct platform_driver omap_i2c_driver = {
 	.probe		= omap_i2c_probe,
@@ -1156,7 +1083,6 @@ static struct platform_driver omap_i2c_driver = {
 	.driver		= {
 		.name	= "omap_i2c",
 		.owner	= THIS_MODULE,
-		.pm	= OMAP_I2C_PM_OPS,
 		.of_match_table = of_match_ptr(omap_i2c_of_match),
 	},
 };
