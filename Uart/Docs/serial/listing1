@@ -1,0 +1,28 @@
+
+struct tty_driver {
+
+    /* the driver states which range of devices it supports */
+    short major;         /* major device number */
+    short minor_start;   /* start of minor device number*/
+    short   num;         /* number of devices */
+
+    /* and has its own operations */
+    int  (*open)();
+    void (*close)();
+    int  (*write)();
+    int  (*ioctl)();  /* device-specific control */
+
+    /* return information on buffer state */
+    int  (*write_room)();      /* how much can be written */
+    int  (*chars_in_buffer)(); /* how much is there to read */
+
+    /* flow control, input and output */
+    void (*throttle)();
+    void (*unthrottle)();
+    void (*stop)();
+    void (*start)();
+
+    /* and callbacks for /proc/tty/driver/<name> */
+    int (*read_proc)();
+    int (*write_proc)();
+};

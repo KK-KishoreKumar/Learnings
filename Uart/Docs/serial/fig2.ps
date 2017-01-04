@@ -1,0 +1,555 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 0 0 612 792
+%%CreationDate: Sun Mar 18 06:53:01 2001
+%%Title: figures.pp
+%%For: rubini (Alessandro Rubini)
+%%DocumentNeededResources: font Courier-Bold Times-Bold Helvetica-Bold 
+%%Creator: Perspecta Presents
+%%Pages: (atend)
+%%PageOrder: Ascend
+%%EndComments
+%%BeginProlog
+% Start of header.ps -- prolog for postscript output
+% Copyright (c) 1992, Perspecta Software, Inc.
+% All rights reserved.
+% $Header: /data/cvs/arcanaweb/docs/serial/fig2.ps,v 1.1 2002/04/04 16:29:46 giometti Exp $
+save /SpotJob exch def
+60 dict begin		% 44 entries plus space for encoding vectors.
+
+% Be a good EPS file and declare all the variables that will be used.
+
+/Matrix matrix def	% Utility matrix
+/CL 0 def		% Color level (0 = BW, 1 = Grey, 2 = Color)
+/FStep .5 def		% Feathering step.
+/SY 0 def		% Saved Y pos for showing text.
+
+/t true def		% used when filling with stippling pattern.
+/f false def
+
+/x 0 def		% The variable x is used as a utility variable to hold
+			% temporary data in procedures.
+/w 0 def		% The width & height of stippled region.
+/h 0 def
+/byteWidth 0 def	% How wide image is in bytes.
+/rowsLeft 0 def		% How many rows left to display in stipple.
+/str 0 def		% A temporary string used when filling stipple.
+/stringLimit 65535 def	% Size of largest string to allocate when stippling.
+
+/dict_countppres 0 def	% Used when including EPS files.
+/op_countppres 0 def
+
+
+% Set the drawing color depending on the color level.
+% If the rgb color is actually a shade of gray, use "setgray"
+% instead of "setrgbcolor" because it gives better output on
+% some color printers.
+
+/Color {		% r g b --
+  setrgbcolor
+  CL 2 lt {
+    currentgray
+    CL 0 eq {
+      .5 lt {0} {1} ifelse
+    } if
+    setgray
+  } {
+    currentrgbcolor 2 index eq 3 1 roll eq and {
+      currentgray setgray
+    } if
+  } ifelse
+} bind def
+
+/arct where {pop} {/arct {arcto pop pop pop pop} bind def} ifelse
+
+% Make a rectangular path.
+
+/Rect {			% width height x y --
+  moveto 1 index 0 rlineto 0 exch rlineto neg 0 rlineto closepath
+} bind def
+
+/RRect {		% x1 y1 x2 y2 r --
+  0 begin
+  /r exch def /y2 exch def /x2 exch def /y1 exch def /x1 exch def
+  x1 r add y1 moveto
+  x2 y1 x2 y2 r arct
+  x2 y2 x1 y2 r arct
+  x1 y2 x1 y1 r arct
+  x1 y1 x2 y1 r arct
+  closepath
+  end
+} dup 0 6 dict put def
+
+% Make a path consisting of an arc segment.
+
+/Arc {			% startangle endangle rx ry cx cy --
+  Matrix currentmatrix pop
+  translate
+  scale
+  0 0 1 5 3 roll arcn
+  Matrix setmatrix
+} bind def
+
+
+% Make a path consisting of a pie slice.
+
+/Pie {			% startangle endangle rx ry cx cy --
+  Matrix currentmatrix pop
+  translate
+  scale
+  0 0 moveto 0 0 1 5 3 roll arcn closepath
+  Matrix setmatrix
+} bind def
+
+
+% Make a path consisting of a sequence of line segments.
+
+% Continue a line.
+/LineRest {		% mark x1 y1 [x2 y2 ...] --
+  counttomark -2 2 {2 roll} for
+  counttomark 2 div cvi {lineto} repeat
+  pop
+} bind def
+
+% Begin a line.
+/Line {			% mark x0 y0 x1 y1 [x2 y2 ...] --
+  counttomark dup 2 sub roll moveto
+  LineRest
+} bind def
+
+
+% Make a path consisting of a spline curve.
+
+% Continue a spline curve.
+/SplineRest {  	% mark x1 y1 x2 y2 x3 y3 [x4 y4 x5 y5 x6 y6 ...] --
+  counttomark -6 6 {6 roll} for
+  counttomark 6 div cvi {curveto} repeat
+  pop
+} bind def
+
+% Begin a spline curve.
+/Spline {	% mark x0 y0 x1 y1 x2 y2 x3 y3 [x4 y4 x5 y5 x6 y6 ...] --
+  counttomark dup 2 sub roll moveto
+  SplineRest
+} bind def
+
+
+% Fill an existing rectangular path with a blended fill.
+
+/Feather {		% r1 g1 b1 r2 g2 b2 angle x y --
+  gsave
+    clip
+    translate
+    rotate
+    3 2 roll 5 index sub
+    3 2 roll 4 index sub
+    3 2 roll 3 index sub
+    /x CL def
+    CL 0 eq {/CL 1 def} if
+
+    pathbbox 4 2 roll pop pop
+
+    exch FStep div floor FStep mul dup 1 le {pop 1} if exch
+
+    newpath
+
+    0 FStep 3 index {
+      FStep 2 mul 2 index 0 0 Rect
+      2 index div
+      dup 6 index mul 9 index add exch
+      dup 6 index mul 9 index add exch
+      5 index mul 8 index add Color fill
+      FStep 0 translate
+    } for
+    
+    8 {pop} repeat
+    /CL x def
+  grestore
+  newpath
+} bind def
+
+/min {2 copy gt {exch} if pop} def
+/max {2 copy lt {exch} if pop} def
+
+
+% Helper function for Pattern
+
+/patternproc {		% pattern -- pattern string
+  byteWidth rowsLeft mul stringLimit 1 sub min
+  byteWidth idiv 8 idiv 8 mul 8 max
+
+  /rowsLeft rowsLeft 2 index sub def
+  /str byteWidth 2 index mul 1 add string def
+  0 1 3 2 roll 1 sub {
+    dup 8 mod 2 index exch get exch
+    byteWidth mul 1 1 index byteWidth add 1 sub {
+      str exch 2 index put
+    } for
+    pop
+  } for
+  pop
+  str
+} bind def
+
+% Return the size in points to use for one side of a square bitmap used in
+% tiling the plane.  The desired effect is that each "bitmap pixel", when
+% printed, occupies an integer number of "printer pixels", so that Moire
+% and other interference patterns are avoided.
+
+/PatternSide {		% -- side
+  72 0 Matrix currentmatrix dtransform
+  dup mul exch dup mul add sqrt 72 div dup round dup 0 eq {pop 1} if
+  exch div 
+} bind def
+
+
+% Either fill the interior or stroke the border of a the current path with
+% a colored pattern.  The path and color are already established by the
+% caller
+
+/Pattern {		% string filled? --
+  % When stroking a stippled dashed line, it may die, so in that
+  % case stroke the line stippled without the dashes.
+
+  {
+    save eoclip
+  } {
+    {save strokepath} stopped {restore save [] 0 setdash strokepath} if
+    clip
+  } ifelse
+
+  PatternSide dup scale
+  pathbbox
+  newpath
+
+  8 div dup 0 gt {ceiling} if cvi 8 mul 4 1 roll
+  8 div dup 0 gt {ceiling} if cvi 8 mul 4 1 roll
+  8 div cvi 8 mul dup 0 lt {8 sub} if 4 1 roll
+  8 div cvi 8 mul dup 0 lt {8 sub} if 4 1 roll
+
+  2 index sub ceiling cvi /h exch def
+  2 index sub ceiling cvi /w exch def
+
+  /byteWidth w 8 div ceiling cvi def
+  /rowsLeft h def
+
+  w 0 gt h 0 gt and {
+    translate w h neg scale
+    w h true [w 0 0 h 0 h] {1 index patternproc} imagemask
+  } {
+    pop pop
+  } ifelse
+
+  restore
+  pop
+
+  newpath
+} bind def
+
+% Ensure that a bbox specifying the slide's area will fit inside the
+% printable region of the printer.
+
+/Fits {		% x1 y1 x2 y2 --
+  0 begin
+  /y2 exch def
+  /x2 exch def
+  /y1 exch def
+  /x1 exch def
+  clippath pathbbox newpath
+  x1 4 index lt x2 3 index gt or {
+    3 index 0 translate
+    true
+  } {false} ifelse
+  y1 4 index lt y2 3 index gt or {
+    0 4 index translate
+    true
+  } {false} ifelse
+  /dx x2 x1 sub def  
+  /dy y2 y1 sub def  
+  3 index 6 index sub /dpx exch def 
+  2 index 5 index sub /dpy exch def 
+  dx dpx gt dy dpy gt or {
+    dx dpx sub dy dpy sub gt {dpx dx div} {dpy dy div} ifelse dup scale
+  } if
+  {0 y1 neg translate} if
+  {x1 neg 0 translate} if
+  4 {pop} repeat
+  end
+} dup 0 9 dict put def 
+
+
+% The following routines are used to print text items
+
+% Find font.
+
+/F {		% pointsize fontname
+  findfont exch scalefont setfont
+} bind def  
+
+
+% Show a string in the current font at the specified coordinates.
+
+/S {		% string x y
+  neg dup /SY exch def moveto show
+} bind def
+
+
+% Show a string in the current font at the specified x location, and at
+% the same y location as the most recently displayed string.
+
+/R {		% string x
+  SY moveto show
+} bind def
+
+/Notice {
+  0 setgray 10 /Helvetica F
+  translate 1 -1 scale
+  (Call Perspecta Software at 510-649-4900 to get licenses.) 0 0 S
+} bind def
+    
+/ReencodeFont {	% new-name vector source-name --
+  findfont
+  dup length dict begin
+    {1 index /FID ne {def} {pop pop} ifelse} forall
+    /Encoding exch def
+    currentdict
+  end
+  definefont pop
+} bind def
+
+/CopyFont {	% new-name source-name --
+  findfont
+  dup length dict begin
+    {1 index /FID ne {def} {pop pop} ifelse} forall
+    currentdict
+  end
+  definefont pop
+} bind def
+
+% The following routines are used to include ecapsulated postscript files.
+
+% Save state before inserting an encapsulated postscript file.
+
+/BeginEPSFppres {		% -- save
+  save
+  /dict_countppres countdictstack def
+  /op_countppres count 1 sub def
+  userdict begin
+  /showpage {} def
+  0 setgray 0 setlinecap 1 setlinewidth 0 setlinejoin
+  10 setmiterlimit [] 0 setdash newpath
+  /languagelevel where {
+    pop languagelevel 1 ne {
+      false setstrokeadjust false setoverprint
+    } if
+  } if
+} bind def
+
+
+% Restore state after inserting an encapsulated postscript file.
+
+/EndEPSFppres {		% save --
+  count op_countppres sub {pop} repeat
+  countdictstack dict_countppres sub {end} repeat
+  restore
+} bind def
+
+
+% The following routines are convenience routines for drawing items.
+
+/W /setlinewidth load def
+/D {0 setdash} bind def
+/K /stroke load def
+/L /eofill load def
+/C /closepath load def
+/CL 2 def
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier-Bold Times-Bold Helvetica-Bold 
+/Enc-iso8859 [ /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /space /exclam /quotedbl /numbersign /dollar /percent /ampersand
+     /quoteright /parenleft /parenright /asterisk /plus /comma /hyphen /period
+     /slash /zero /one /two /three /four /five /six /seven /eight /nine /colon
+     /semicolon /less /equal /greater /question /at /A /B /C /D /E /F /G /H /I
+     /J /K /L /M /N /O /P /Q /R /S /T /U /V /W /X /Y /Z /bracketleft /backslash
+     /bracketright /asciicircum /underscore /quoteleft /a /b /c /d /e /f /g /h
+     /i /j /k /l /m /n /o /p /q /r /s /t /u /v /w /x /y /z /braceleft /bar
+     /braceright /asciitilde /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+     /.notdef /.notdef /.notdef /.notdef /dotlessi /grave /acute /circumflex
+     /tilde /macron /breve /dotaccent /dieresis /.notdef /ring /cedilla
+     /.notdef /hungarumlaut /ogonek /caron /space /exclamdown /cent /sterling
+     /currency /yen /brokenbar /section /dieresis /copyright /ordfeminine
+     /guillemotleft /logicalnot /hyphen /registered /macron /degree /plusminus
+     /twosuperior /threesuperior /acute /mu /paragraph /periodcentered /cedilla
+     /onesuperior /ordmasculine /guillemotright /onequarter /onehalf
+     /threequarters /questiondown /Agrave /Aacute /Acircumflex /Atilde
+     /Adieresis /Aring /AE /Ccedilla /Egrave /Eacute /Ecircumflex /Edieresis
+     /Igrave /Iacute /Icircumflex /Idieresis /Eth /Ntilde /Ograve /Oacute
+     /Ocircumflex /Otilde /Odieresis /multiply /Oslash /Ugrave /Uacute
+     /Ucircumflex /Udieresis /Yacute /Thorn /germandbls /agrave /aacute
+     /acircumflex /atilde /adieresis /aring /ae /ccedilla /egrave /eacute
+     /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis /eth
+     /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide /oslash
+     /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis] def
+/pCourier-Bold Enc-iso8859 /Courier-Bold ReencodeFont
+/pTimes-Bold Enc-iso8859 /Times-Bold ReencodeFont
+/pHelvetica-Bold Enc-iso8859 /Helvetica-Bold ReencodeFont
+%%EndSetup
+%%Page: slide_2 1
+save 90 rotate 1 -1 scale
+ save 0 0 translate 1 dup scale
+  792 612 0 0 Rect clip 1 setgray fill
+  621 122 translate 1 -1 scale
+  1 -1 scale -621 -122 translate newpath
+  34 86 translate 1 -1 scale
+   0 0 0 Color 18 /pHelvetica-Bold F
+   (Situation) 96.67 17.848 S
+   (when) 178.678 R
+   (the) 229.69 R
+   (slip) 261.694 R
+   (protocol) 297.712 R
+   (is) 374.716 R
+   (being) 394.732 R
+   (used) 447.742 R
+  1 -1 scale -34 -86 translate newpath
+  [ 72 207 72 216 Line 0 0 0 Color 2 W K
+  [ 72 216 63 225 Line 0 0 0 Color 2 W K
+  [ 72 216 81 225 Line 0 0 0 Color 2 W K
+  [ 72 225 72 261 Line 0 0 0 Color 2 W K
+  [ 72 225 63 234 Line 0 0 0 Color 2 W K
+  [ 72 225 81 234 Line 0 0 0 Color 2 W K
+  [ 45 153 216 153 216 207 45 207 Line C 0 0 0 Color 1 W K
+  [ 45 261 414 261 414 315 45 315 Line C 0 0 0 Color 1 W K
+  [ 45 369 216 369 216 423 45 423 Line C 0 0 0 Color 1 W K
+  [ 72 315 72 324 Line 0 0 0 Color 2 W K
+  [ 72 324 63 333 Line 0 0 0 Color 2 W K
+  [ 72 324 81 333 Line 0 0 0 Color 2 W K
+  [ 72 333 72 369 Line 0 0 0 Color 2 W K
+  [ 72 333 63 342 Line 0 0 0 Color 2 W K
+  [ 72 333 81 342 Line 0 0 0 Color 2 W K
+  [ 243 369 612 369 612 423 243 423 Line C 0 0 0 Color 1 W K
+  [ 270 315 270 324 Line 0 0 0 Color 2 W K
+  [ 270 324 261 333 Line 0 0 0 Color 2 W K
+  [ 270 324 279 333 Line 0 0 0 Color 2 W K
+  [ 270 333 270 369 Line 0 0 0 Color 2 W K
+  [ 270 333 261 342 Line 0 0 0 Color 2 W K
+  [ 270 333 279 342 Line 0 0 0 Color 2 W K
+  360 0 90 27 324 180 Arc 0 0 0 Color 1 W K
+  45 162 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (fs/devices.c) 34.925 12.97 S
+  1 -1 scale -45 -162 translate newpath
+  234 171 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (/dev/ttyS0) 47.769 12.97 S
+  1 -1 scale -234 -171 translate newpath
+  54 270 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (tty_io.c) 142.159 12.97 S
+  1 -1 scale -54 -270 translate newpath
+  45 378 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (serial.c) 47.239 12.97 S
+  1 -1 scale -45 -378 translate newpath
+  243 378 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (drivers/net/slip.c) 37.019 12.97 S
+  1 -1 scale -243 -378 translate newpath
+  279 351 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (struct) 0.724 11.26 S
+   (tty_disc*) 51.124 R
+  1 -1 scale -279 -351 translate newpath
+  81 351 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (struct) 0.724 11.26 S
+   (tty_driver*) 51.124 R
+  1 -1 scale -81 -351 translate newpath
+  [ 324 207 324 261 Line 0 0 0 Color [2 2] D 2 W K [] D
+  [ 123.75 441 123.75 477 Line 0 0 0 Color 3 W K
+  [ 137.25 441 137.25 477 Line 0 0 0 Color 3 W K
+  [ 130.5 432 117 450 Line 0 0 0 Color 3 W K
+  [ 130.5 432 144 450 Line 0 0 0 Color 3 W K
+  [ 117 468 130.5 486 Line 0 0 0 Color 3 W K
+  [ 144 468 130.5 486 Line 0 0 0 Color 3 W K
+  360 0 4.125 4.5 97.5 517.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 114 517.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 130.5 517.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 163.5 517.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 147 517.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 105.75 535.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 122.25 535.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 155.25 535.5 Arc 0 0 0 Color 2 W K
+  360 0 4.125 4.5 138.75 535.5 Arc 0 0 0 Color 2 W K
+  [ 89.25 504 171.75 504 Line 0 0 0 Color 2 W K
+  [ 101.625 549 159.375 549 Line 0 0 0 Color 2 W K
+  [ 167.625 544.5 180 513 Line 0 0 0 Color 2 W K
+  [ 93.375 544.5 81 513 Line 0 0 0 Color 2 W K
+  [ 89.25 504 83.75 504 81 507 81 513 Spline 0 0 0 Color 2 W K
+  [ 171.75 504 177.25 504 180 507 180 513 Spline 0 0 0 Color 2 W K
+  [ 159.375 549 164.875 549 167.625 547.5 167.625 544.5 Spline 0 0 0 Color 2 W K
+  [ 101.625 549 96.125 549 93.375 547.5 93.375 544.5 Spline 0 0 0 Color 2 W K
+  [ 99 486 90 477 Line 1 0 0 Color 3 W K
+  [ 99 486 108 477 Line 1 0 0 Color 3 W K
+  [ 99 486 99 456 91.5 430.5 76.5 409.5 61.5 388.5 54 364.5 54 337.5 54 310.5
+     69 297 99 297 129 297 154.5 297 175.5 297 196.5 297 214.5 298.5
+     229.5 301.5 244.5 304.5 252 318 252 342 252 366 252 384 252 396 252 408
+     270 414 306 414 342 414 375 414 405 414 435 414 448.5 402 445.5 378
+     442.5 354 441 337.5 441 328.5 441 319.5 441 310.5 441 301.5 441 292.5
+     447 283.5 459 274.5 471 265.5 481.5 258 490.5 252 499.5 246 504 234
+     504 216 Spline 1 0 0 Color 3 W K
+  81 315 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (tty_register_driver\(\);) 1.444 11.26 S
+  1 -1 scale -81 -315 translate newpath
+  279 315 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (tty_register_ldisc\(\);) 1.444 11.26 S
+  1 -1 scale -279 -315 translate newpath
+  81 207 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (register_chrdev\(\);) 0.952 11.26 S
+  1 -1 scale -81 -207 translate newpath
+  81 243 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (struct) 0.724 11.26 S
+   (file_operations) 51.124 R
+   (*;) 166.324 R
+  1 -1 scale -81 -243 translate newpath
+  [ 432 261 612 261 612 315 432 315 Line C 0 0 0 Color 1 W K
+  432 270 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (net/core/dev.c) 31.389 12.97 S
+  1 -1 scale -432 -270 translate newpath
+  [ 459 315 459 324 Line 0 0 0 Color 2 W K
+  [ 459 324 450 333 Line 0 0 0 Color 2 W K
+  [ 459 324 468 333 Line 0 0 0 Color 2 W K
+  [ 459 333 459 369 Line 0 0 0 Color 2 W K
+  [ 459 333 450 342 Line 0 0 0 Color 2 W K
+  [ 459 333 468 342 Line 0 0 0 Color 2 W K
+  468 351 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (struct) 0.724 11.26 S
+   (net_device*) 51.124 R
+  1 -1 scale -468 -351 translate newpath
+  468 315 translate 1 -1 scale
+   0 0 0 Color 12 /pCourier-Bold F
+   (register_netdevice\(\);) 0.952 11.26 S
+  1 -1 scale -468 -315 translate newpath
+  360 0 90 27 522 180 Arc 0 0 0 Color 1 W K
+  432 171 translate 1 -1 scale
+   0 0 0 Color 14 /pCourier-Bold F
+   (slip0) 68.839 12.97 S
+  1 -1 scale -432 -171 translate newpath
+  [ 522 207 522 261 Line 0 0 0 Color [2 2] D 2 W K [] D
+  [ 504 216 495 225 Line 1 0 0 Color 3 W K
+  [ 504 216 513 225 Line 1 0 0 Color 3 W K
+ restore
+restore showpage
+%%Trailer
+%%Pages: 1
+end SpotJob restore
+%%EOF

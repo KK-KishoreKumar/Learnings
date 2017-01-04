@@ -1,0 +1,15 @@
+
+struct tty_ldisc {
+
+    /* routines called from above */
+    int     (*open)();
+    void    (*close)();
+    ssize_t (*read)();
+    ssize_t (*write)();
+    int     (*ioctl)();
+
+    /* routines called from below */
+    void    (*receive_buf)();
+    int     (*receive_room)();
+    void    (*write_wakeup)();
+};

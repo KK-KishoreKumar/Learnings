@@ -1,0 +1,441 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html>
+<head>
+<meta name="language" content="english">
+<link href="./en.css" rel="stylesheet" type="text/css">
+<title>Serial Drivers</title>
+</head>
+<body>
+
+<h1>Serial Drivers</h1>
+                                <p align=right>by Alessandro Rubini</p>
+
+<P>This article is meant to show the internal structure of device
+drivers for serial ports, and how they can be perform a variety of
+services including <i>ppp</i> and <i>slip</i>.  The discussion is
+based on 2.4 source code, but most of the material applies equally
+well to 2.2 and 2.0.
+
+<!-- =============================================================== -->
+<h3>The usual view of a serial port</h3>
+
+<P>When discussing the software implementation of a serial port, the
+first thing that comes to mind is <code>/dev/ttyS0</code>, as this is
+the most known character of serial communication, at least on PC-class
+computers. Since <code>/dev/ttyS0</code> is a file special file of
+type ``char'', a serial driver is often considered a conventional char
+driver, and phrases like ``char drivers are exemplified by serial
+ports'' come to mind. Unfortunately, the exemplification is basically
+wrong.
+
+<P>If you look in the real code, you'll see how the ``char driver''
+idea only scratches the surface of what a serial driver is, and that's
+why a serial driver doesn't quite lend itself to be the prototypical
+example of char drivers.
+
+<P>Actually, the ``char driver'' abstraction doesn't correctly
+describe serial device drivers because there is not specific major
+number associated to each of them. Actually, you can have add-on
+serial ports that plug in your computer and are managed by specific
+kernel modules but do not get assigned a new major number.
+
+<!-- Do we need a box about major numbers? I'd like to avoid that, but
+maybe you don't agree with me that it's a known idea. Obviously "char
+driver" must be considered known -->
+
+<P>Looking in <code>/proc/devices</code> you'll find that major 4 is
+associated to the <code>ttyS</code> driver, but that's a white lie:
+text-mode console devices belong to major 4 too, and, actually,
+Linux-2.0 used the more general ``<code>ttyp</code>'' name for major
+number 4.
+
+<P>What makes a serial port different from a more conventional char
+driver like the printer port or a tape drive is its being part of the
+tty abstraction. Since a serial communication channel can be used to
+plug an alphanumeric terminal, a serial device driver must be
+integrated in the terminal emulator layer, called the ``tty''
+abstraction, from the name of ancient tele-type devices (still in wide
+use when Unix was being written)
+
+<!-- =============================================================== -->
+<h3>Overview of tty management</h3>
+
+<P>Flexible and powerful tty handling is made up of several building
+blocks. You must consider that there exist a huge range of tty
+devices, from VGA and frame-buffer based text consoles up to serial
+communication channels and virtual terminals as exemplified by (but
+not limited to) the <code>xterm</code> application.
+
+<P>Figure 1 shows the various building blocks that are involved with
+operation of a serial driver.  Most files live in <i>drivers/char</i>,
+if not, the directory specified is relative to the root directory of
+the kernel source tree. The figure shows how each building block is
+registered (registration is there in order to allow each block to be
+implemented as a kernel module).
+
+<!-- figure1 here -->
+<hr>
+<p><img src="fig1.png" border=2>
+<br><b>Figure 1</b>
+<p>The image is available as PostScript <a href="fig1.ps">here</a>
+<hr>
+
+
+<P>The file <i>fs/devices.c</i> exports the interface used by most
+system resources to register device drivers, each identified by a
+major number). This is how <code>tty_register_driver</code> gets hold
+of a major number if it needs it to support the new tty driver (an
+object that is introduced below). The function is defined by
+<i>tty_io.c</i>, which also defines the file operations that are used
+to act on tty devices. File operation are the driver-specific
+implementations of <i>read</i>, <i>write</i> and the other system
+calls that relate to file access.
+
+<P>What <i>serial.c</i> or other serial drivers do in order to run
+their own code is registering a <code>struct tty_driver</code> object.
+The ``driver'' declares the major number and the range of minor
+numbers it is going to manage, as well as a number of operations it
+supports. The operations are concerned with input and output of data
+as well as flow control and communication with higher layers.  The
+implementation of these operations, together with interrupt handling
+and actual input/output of data is the scope of hardware
+drivers for serial ports.
+
+<P>The data flow between user space and the serial device driver,
+therefore, is mediated by the tty layer, that implements
+functionalities that are common to all tty-type devices. However, not
+all of tty management is defined be <i>tty_io.c</i>, most of the policy
+is define by the <i>line discipline</i>, a software module that
+disciplines how a physical tty I/O line is used.  The default line
+discipline for Linux is called <code>N_TTY</code>, a name that will be
+explained later. If <i>n_tty</i> is active, input data reaches user
+space via the usual <i>/dev/</i> interface and the standard terminal
+I/O handling (i.e, all the features defined by
+<code>&lt;termios.h&gt;</code>, that make terminal handling so
+powerful and so difficult).
+
+<P>The red line in figure 1 shows the logical flow of data, from the
+hardware channel up to the user-accessible device special file and
+backwards. What keeps it all together is the <code>struct tty</code>
+data item, that in itself includes a pointer to all three relevant
+objects: the <code>file_operations</code> structure that is used in
+communicating with user space, the <code>tty_driver</code> structure
+that hosts functions to control real hardware, and the
+<code>tty_ldisc</code> structure that lists all entry points to the
+current line discipline.
+
+<!-- =============================================================== -->
+<h3>Why so complex?</h3>
+
+<P>Sure this kind of arrangement may look exceedingly
+complex. However, as usual, the extra complexity is meant to make
+things ultimately more flexible and powerful. Adding support for new
+serial hardware may be different from writing a conventional char
+driver, but this setup guarantees full tty emulation on all serial
+ports without any code replication or unneeded complexity in the
+low-level driver.
+
+<P>Another advantage of this kind of arrangement, possibly even more
+important than generalized tty support, is in the ability to change
+the line discipline associated to each tty device. Unlike typical
+device drivers, whose task is connecting an hardware device with user
+space, a serial driver has nothing to do with user space; data it
+receives from the hardware is passed over to the line discipline, and
+data it receives from software comes via a line discipline method.
+
+<P>A serial driver, therefore, is not concerned in any way with data
+transfer to/from user space. The task is left to the line discipline,
+together with all the hairy <code>termios</code> handling. This makes
+it possible for serial data to be steered to a different user-space
+access facility than its associated <i>ttyS</i> device special file.
+
+<!-- =============================================================== -->
+<h3>PPP and slip</h3>
+
+<P>Whenever you dial your modem with <i>ppp</i> to connect to the
+Internet, or use the simpler <i>slip</i> communication protocol to
+connect the PC to your Linux palm-top, you are exploiting the
+complexity just shown. Both <i>ppp</i> and <i>slip</i> implement their
+own line discipline; when either of them is run, the tty device is
+switched to a different line discipline in order to detach
+<i>/dev/ttyS0</i> from the serial port and keep all of serial
+communication within the kernel.
+
+<P>Figure 2 shows the conceptual layout in the <i>slip</i> case. I
+chose not to use <i>ppp</i> in the example to avoid extra complexity
+or incorrect simplification. In version 2.4 of the Linux kernel the
+<i>ppp</i> software implementation is split in several files (once
+again, it's more structured to be more powerful and avoid code
+replication across similar devices). The two protocols behave
+otherwise in the same manner.
+
+<!-- figure 2 here or nearby -->
+<hr>
+<p><img src="fig2.png" border=2>
+<br><b>Figure 2</b>
+<p>The image is available as PostScript <a href="fig2.ps">here</a>
+<hr>
+
+<p>The role of the <i>slip</i> driver, as shown, is registering both a
+network device (depicted as <code>slip0</code> and a line discipline
+for tty devices (called <code>N_SLIP</code>). When the tty device is
+switched to the new line discipline, TCP/IP communication can begin.
+The new line discipline sets up data transfer between serial hardware
+and the network layer; when it is active, nothing can be read from or
+written to the associated <i>/dev/ttyS</i> device. As soon as the
+device (<code>/dev/ttyS0</code> or equivalent) is closed, the default
+line discipline is restored. Actually, that's the main reason why
+neither <i>slattach</i> nor <i>pppd</i> can exit after setting up the
+network channel.
+
+<!-- =============================================================== -->
+<h3>The individual data structures</h3>
+
+<P>There are three main data structures involved in tty management
+(and thus, serial communication):
+
+<UL>
+
+<LI><code>struct tty_struct</code>: this is the data structure that
+	stays at the core of tty management. It includes both of the
+	following structures. An instance of <code>tty_struct</code>
+	is created any time a new tty device is opened, and exists
+	until it is last closed. Note that actual code (in
+	<code>tty_io.c</code>) is complicated by the need to preserve
+	<code>termios</code> settings across close and open, at least
+	for some of the ttys (like serial ports).
+
+<LI><code>struct tty_driver</code>: this is the low level hardware
+	handling. At open time, the function <code>get_tty_driver</code>
+	retrieves the driver for the current tty an places it into
+	the <code>driver</code> field of <code>tty_struct</code>, where
+	it is further accessed.
+
+	<code><pre>
+	struct tty_driver {
+	
+	    /* the driver states which range of devices it supports */
+	    short major;         /* major device number */
+	    short minor_start;   /* start of minor device number*/
+	    short   num;         /* number of devices */
+	
+	    /* and has its own operations */
+	    int  (*open)();
+	    void (*close)();
+	    int  (*write)();
+	    int  (*ioctl)();  /* device-specific control */
+	
+	    /* return information on buffer state */
+	    int  (*write_room)();      /* how much can be written */
+	    int  (*chars_in_buffer)(); /* how much is there to read */
+	
+	    /* flow control, input and output */
+	    void (*throttle)();
+	    void (*unthrottle)();
+	    void (*stop)();
+	    void (*start)();
+	
+	    /* and callbacks for /proc/tty/driver/<name> */
+	    int (*read_proc)();
+	    int (*write_proc)();
+	};
+	</pre></code>
+
+<LI><code>struct tty_ldisc</code>: the structure is referenced by the
+	<code>ldisc</code> field of <code>tty_struct</code>. At open
+	time the field is initialized to reference <i>n_tty</i>, and
+	user programs can change the current line discipline via
+	<i>ioctl</i>, as explained in a while.
+
+	<code><pre>
+	struct tty_ldisc {
+	
+	    /* routines called from above */
+	    int     (*open)();
+	    void    (*close)();
+	    ssize_t (*read)();
+	    ssize_t (*write)();
+	    int     (*ioctl)();
+	
+	    /* routines called from below */
+	    void    (*receive_buf)();
+	    int     (*receive_room)();
+	    void    (*write_wakeup)();
+	};
+	</pre></code>
+</UL>
+
+<P>The structures are declared in three different files:
+<code>tty_struct</code> is a complex structure defined in
+<i>include/linux/tty.h</i>, a header generally devoted to tty
+issues. Actually, it is not as interesting to look at as the other
+two, because user modules rarely need to directly interact with it.
+
+<P><i>include/linux/tty_driver.h</i> and
+<i>include/linux/tty_ldisc.h</i> are devoted exclusively to the
+definition of the relevant data structures. The files carry a
+prominent comment block that explains the exact role of most of the
+fields. Unlike <code>tty_struct</code>, both <code>tty_driver</code>
+and <code>tty_ldisc</code> are actively used by authors of device
+driver modules.
+
+<P>Typically, a kernel module that supports a new kind of hardware
+transmission will implement a <code>tty_driver</code> structure, while
+a module that uses generic serial hardware for a new purpose will
+implement a line discipline. For example, if you have a special
+keyboard that transmits data via a standard RS-232 serial port, you'll need a
+line discipline that gathers data packets and send them to either
+the input mechanism (see <i>drivers/input/input.c</i> and
+<i>include/linux/input.h</i>) or to the generic keyboard driver (using
+<code>handle_scancode()</code>, exported by
+<i>drivers/char/keyboard.c</i>). 
+
+<!-- listing 1 and 2 here. While L1 is large, L2 is thin so it can fit
+in one column -->
+
+<P>Listing 1 shows the most important operations declared by the
+<code>tty_driver</code> data structure, while listing 2 depicts those
+exported by the line discipline. Note that those listings are by
+no means complete, if you look for authoritative information, 
+you should read the relevant header files.
+
+<!-- =============================================================== -->
+<h3>Data flow in reading and writing</h3>
+
+<!-- figure 3 here or nearby -->
+<hr>
+<p><img src="fig3.png" border=2>
+<br><b>Figure 3</b>
+<p>The image is available as PostScript <a href="fig3.ps">here</a>
+<hr>
+
+<P>Figure 3 visualizes how data flows from user space down to hardware
+interfaces and backwards. It refers to the specific case of a standard
+PC serial port with the default line discipline attached. The logical
+stacking of line disciplines (near to user space) and tty drivers
+(near to the hardware itself) should be apparent.
+
+<P>While writing data is straightforward, the reading process may need
+some explanation. Reading is more complex than writing because there's
+no direct causal relationship between hardware (that pushes up data
+when it arrives) and user space (that requests data when it needs it).
+The solution is, as you expected, use of buffering: data received by
+hardware remains on hold in a kernel buffer until a user space program
+requests it; whenever a user program asks for data and the buffer is
+empty, the program is put to sleep, and is awaken only when the buffer
+is filled with at least partially. Note that a write buffer exists as
+well, however, the <i>write</i> implementation is much more
+straightforward because each step towards hardware level is directly
+driven by the step above it. There are no uncontrolled delays in data
+transmission, and the buffer is only needed to decouple hardware
+transmission from program flow. The figure does not show it for
+simplicity.
+
+<P>When tty devices are concerned, the read buffer lives within the
+tty data structure; while this makes <code>struct tty_struct</code>
+considerably bigger, there is no point in keeping the buffer
+elsewhere: each tty can't transfer data without a buffer, and tty
+devices are dynamically allocated so no memory is wasted in buffers
+for unused devices.
+
+<P>Actually, tty-related buffering is organized in two levels: kernel
+developers chose to provide both a ``conventional'' buffer, where data
+is waiting to be eaten by the line discipline (i.e., in the default
+case, being transferred to user space), and a ``flip'' buffer, used by
+hardware routines to store incoming data as quickly as possible,
+without the need to synchronize for concurrent access: flip buffers
+are exclusive ownership of the hardware device, which eventually calls
+<i>tty_flip_buffer_push</i> to deliver data to the tty buffer, where
+the line discipline pulls it from.
+
+<P>It's interesting to note that the flip buffer is laid out as two
+physical buffers that are alternatively written to. This allows more
+reliable operation, as the interrupt handler will always have a whole
+buffer available for writing.  The function <i>flush_to_ldisc</i>,
+called by the low-level driver and part of the tty layer (i.e.,
+<i>tty_io.c</i>), arranges for the flip buffer to be flipped, before
+the interrupt handler returns. This layout, by the way, is why
+the flip buffer is called so.
+
+<!-- =============================================================== -->
+<h3>How to use a custom line discipline</h3>
+
+<P>Kernel code, as stated, can register a new line discipline with the
+tty subsystem, and this is also available to modularized code. You
+could, therefore, write your own line discipline and register it.
+Each line discipline is identified by a number, and a symbolic
+name for it is available, as common with C programming. Assigned
+numbers are given a name by <i>include/asm/termios.h</i>.
+
+<P>The default tty line discipline is identified by a number of
+<code>N_TTY</code>, PPP uses <code>N_PPP</code> and so
+on. Unfortunately, no line discipline numbers have currently been
+reserved for ``local use'', so you can only experiment with the
+numbers that are not used on your system. Actually, no official driver
+currently used <code>N_MOUSE</code>, so this is a good bet for your
+custom line discipline.
+
+<P>In order to activate the <code>N_MOUSE</code> line discipline, the
+user space program must use this code:
+
+<code><pre>
+    #include <sys/ioctl.h>
+
+    int i = N_MOUSE;
+    ioctl(fd, TIOCSETD, &i);
+</pre></code>
+
+
+<!-- =============================================================== -->
+<h3>The role of register_serial</h3>
+
+<p>If you noted that <i>drivers/char/serial.c</i> exports a function
+called <i>register_serial</i>, you may wonder what's its role in the
+tty architecture just outlined. As a matter of facts, the facility is
+only an hook offered by the ``standard'' serial tty driver in order to
+easy run-time addition of standard serial ports. The ``serial'' being
+registered is not a whole software module, but rather, only a
+definition or parameters to use for the new serial port. The
+parameters are described by <code>struct serial_struct</code>, which
+in turn is defined by <i>include/linux/serial.h</i>; they are used by
+the conventional serial driver, exploiting the de-facto
+standardization that exists on PC serial ports. You can't use the
+function to register a driver for serial hardware of a different kind
+than a 16450 or compatible UART. The list of supported hardware for
+the PC platform is found in the array <code>uart_config</code>, in
+<i>serial.c</i>. Other platforms offer different implementations for
+<code>register_serial</code>.
+
+<!-- =============================================================== -->
+<h3>The serial console</h3>
+
+<p>Serial ports can also be used as console devices, and this kind of
+functionality is separate from tty management. Actually, the console
+device sits in the lowest levels of Linux, as it must bring critical
+information out of the system as soon as possible.  It just can't be
+involved in all the complexity of tty management.  But in version 2.4
+(as well as 2.2) console management is a world of its own, with its
+own data structures and functions that make it very flexible yet
+reliable. Discussion of such world is best delayed to next month's
+column.
+
+<hr>
+
+<blockquote><i>Verbatim copying and distribution of this entire article is
+permitted in any medium, provided this notice is preserved</i></blockquote>
+
+<hr>
+
+<i>Alessandro is an independent consultant based in Italy.  Even
+though he claims to be a programmer, his activity consists mostly in
+advocating libre software and documenting what real programmers do.
+He runs the GNU operating system on his computers, and can thus be
+reached as </i><code>rubini@gnu.org</code>.
+
+</body>
+</html>
+
+<!--  LocalWords:  LocalWords html ttyS proc ttyp tele linux termios -->
+<!--  LocalWords:  ldisc struct pppd slattach TIOCSETD config scancode -->
+<!--  LocalWords:  uart
+ -->

@@ -1,0 +1,132 @@
+BODY {
+	font-family: Helvetica;
+ 	font-size: 12px;
+ 	color: #000000;
+ 	background-color: #CCEECC;
+	margin-left: 5pt;
+	margin-top: 5pt;
+	margin-right: 5pt;
+	margin-bottom: 5pt;
+}
+
+H1 {
+	font-family: Helvetica;
+	font-size: 24px;
+	font-weight: navy;
+	color: brown;
+	float:center;
+}
+
+H2 {
+	font-family: Helvetica;
+	font-size: 18px;
+	font-weight: bold;
+	color: navy;
+}
+
+H3 {
+	font-family: Helvetica;
+	font-size: 16px;
+	font-weight: bold;
+	color: teal;
+}
+
+TH {
+	font-family: Helvetica;
+ 	font-size: 12px;
+}
+ 
+TD {
+	font-family: Helvetica;
+ 	font-size: 12px;
+}
+
+P {
+	font-family: Helvetica;
+ 	font-size: 12px;
+}
+
+UL {
+	font-family: Helvetica;
+ 	font-size: 12px;
+}
+
+LI {
+	font-family: Helvetica;
+ 	font-size: 12px;
+}
+	
+A {
+	font-family: Helvetica;
+ 	font-size: 12px;
+	font-weight: bold;
+ 	color: #008800;
+ 	text-decoration: none;
+}
+A:visited { 
+	color: #004444;
+}
+A:hover { 
+	color: #00AA00;
+	text-decoration: underline;
+}
+A:active{
+	color: #00AA00;
+	text-decoration: underline;
+}
+
+
+.boxtitle {
+	font-family: Helvetica;
+ 	font-size: 12px;
+	font-weight: bold;
+	color: #FFFFFF;
+}
+
+
+/* images, tables, code */
+div.floatleft, table.floaleft {
+        float: left;
+        position: relative;
+        margin: 3em 3em 3em 3em;
+	padding: 3em;
+	background: #99DD99;
+}
+div.floatleft p { font-weight: bold; }
+
+div.nofloat {
+        position: relative;
+        margin: 3em 3em 3em 3em;
+	padding: 3em;
+	background: #99DD99;
+}
+div.nofloat p { font-weight: bold; }
+
+div.imgleft {
+        float: left;
+        position: relative;
+        margin: 1em 1em 1em 1em;
+	padding: 1em;
+	background: #DDFFDD;
+	border: thin solid #222222;
+}
+
+div.img {
+        position: relative;
+        margin: 1em 1em 1em 1em;
+	padding: 1em;
+	background: #DDFFDD;
+	border: thin solid #222222;
+}
+
+div.code {
+        margin: 1em 1em 1em 1em;
+	padding: .2em;
+	background: #FFFFFF;
+	border: thin solid #222222;
+}
+div.code p {
+	font-weight: bold;
+	font-family: courier
+}
+	
