@@ -104,7 +104,7 @@ static void tiny_timer(unsigned long data)
 	printk("Firing\n");
 	mod_timer(&my_timer, jiffies + msecs_to_jiffies(2000));//add_timer(&my_timer);
 	/* see if we have any data to transmit */
-	//tiny_tx_chars(port);
+	tiny_tx_chars(port);
 }
 static unsigned int tiny_tx_empty(struct uart_port *port)
 {
