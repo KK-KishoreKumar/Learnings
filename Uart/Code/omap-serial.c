@@ -103,6 +103,7 @@
 #define OMAP_UART_SW_CLR	0xF0
 
 #define OMAP_UART_TCR_TRIG	0x0F
+#define DRIVER_NAME1	"my_uart"
 
 struct uart_omap_dma {
 	u8			uart_dma_tx;
@@ -655,7 +656,7 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	serial_out(up, UART_MCR, up->mcr);
 	pm_runtime_mark_last_busy(up->dev);
 	pm_runtime_put_autosuspend(up->dev);
-
+#if 0
 	if (gpio_is_valid(up->DTR_gpio) &&
 	    !!(mctrl & TIOCM_DTR) != up->DTR_active) {
 		up->DTR_active = !up->DTR_active;
@@ -665,6 +666,7 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 			gpio_set_value(up->DTR_gpio,
 				       up->DTR_active != up->DTR_inverted);
 	}
+#endif
 }
 
 static void serial_omap_break_ctl(struct uart_port *port, int break_state)
@@ -844,7 +846,7 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	/* calculate wakeup latency constraint */
 	up->calc_latency = (USEC_PER_SEC * up->port.fifosize) / (baud / 8);
 	up->latency = up->calc_latency;
-	schedule_work(&up->qos_work);
+	//schedule_work(&up->qos_work);
 
 	up->dll = quot & 0xff;
 	up->dlh = quot >> 8;
@@ -1320,6 +1322,7 @@ static inline void serial_omap_add_console_port(struct uart_omap_port *up)
 static void
 serial_omap_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 {
+#if 0
 	struct uart_omap_port *up = to_uart_omap_port(port);
 	unsigned long flags;
 	unsigned int mode;
@@ -1335,7 +1338,7 @@ serial_omap_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 
 	/* store new config */
 	up->rs485 = *rs485conf;
-
+#if 0
 	/*
 	 * Just as a precaution, only allow rs485
 	 * to be enabled if the gpio pin is valid
@@ -1348,6 +1351,7 @@ serial_omap_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 		gpio_set_value(up->rts_gpio, val);
 	} else
 		up->rs485.flags &= ~SER_RS485_ENABLED;
+#endif
 
 	/* Enable interrupts */
 	up->ier = mode;
@@ -1356,6 +1360,7 @@ serial_omap_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 	spin_unlock_irqrestore(&up->port.lock, flags);
 	pm_runtime_mark_last_busy(up->dev);
 	pm_runtime_put_autosuspend(up->dev);
+#endif
 }
 
 static int
@@ -1416,10 +1421,10 @@ static struct uart_ops serial_omap_pops = {
 
 static struct uart_driver serial_omap_reg = {
 	.owner		= THIS_MODULE,
-	.driver_name	= "OMAP-SERIAL",
-	.dev_name	= OMAP_SERIAL_NAME,
-	.nr		= OMAP_MAX_HSUART_PORTS,
-	.cons		= OMAP_CONSOLE,
+	.driver_name	= "MY-SERIAL",
+	.dev_name	= "ttym",
+	.nr		= 1,
+	.cons		= NULL,
 };
 
 #ifdef CONFIG_PM_SLEEP
@@ -1444,7 +1449,7 @@ static int serial_omap_suspend(struct device *dev)
 	struct uart_omap_port *up = dev_get_drvdata(dev);
 
 	uart_suspend_port(&serial_omap_reg, &up->port);
-	flush_work(&up->qos_work);
+	//flush_work(&up->qos_work);
 
 	return 0;
 }
@@ -1533,6 +1538,7 @@ static struct omap_uart_port_info *of_get_uart_port_info(struct device *dev)
 static int serial_omap_probe_rs485(struct uart_omap_port *up,
 				   struct device_node *np)
 {
+#if 0
 	struct serial_rs485 *rs485conf = &up->rs485;
 	u32 rs485_delay[2];
 	enum of_gpio_flags flags;
@@ -1548,7 +1554,6 @@ static int serial_omap_probe_rs485(struct uart_omap_port *up,
 		rs485conf->flags |= SER_RS485_RTS_ON_SEND;
 	else
 		rs485conf->flags |= SER_RS485_RTS_AFTER_SEND;
-
 	/* check for tx enable gpio */
 	up->rts_gpio = of_get_named_gpio_flags(np, "rts-gpio", 0, &flags);
 	if (gpio_is_valid(up->rts_gpio)) {
@@ -1573,6 +1578,7 @@ static int serial_omap_probe_rs485(struct uart_omap_port *up,
 
 	if (of_property_read_bool(np, "linux,rs485-enabled-at-boot-time"))
 		rs485conf->flags |= SER_RS485_ENABLED;
+#endif
 
 	return 0;
 }
@@ -1588,6 +1594,7 @@ static int serial_omap_probe(struct platform_device *pdev)
 		omap_up_info = of_get_uart_port_info(&pdev->dev);
 		pdev->dev.platform_data = omap_up_info;
 	}
+	printk("Here 1\n");
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -1606,10 +1613,11 @@ static int serial_omap_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "memory region already claimed\n");
 		return -EBUSY;
 	}
-
+	printk("Here 2\n");
+#if 0
 	if (gpio_is_valid(omap_up_info->DTR_gpio) &&
 	    omap_up_info->DTR_present) {
-		ret = gpio_request(omap_up_info->DTR_gpio, "omap-serial");
+		ret = gpio_request(omap_up_info->DTR_gpio, "my-serial");
 		if (ret < 0)
 			return ret;
 		ret = gpio_direction_output(omap_up_info->DTR_gpio,
@@ -1617,22 +1625,24 @@ static int serial_omap_probe(struct platform_device *pdev)
 		if (ret < 0)
 			return ret;
 	}
+#endif
 
 	up = devm_kzalloc(&pdev->dev, sizeof(*up), GFP_KERNEL);
 	if (!up)
 		return -ENOMEM;
-
+#if 0
 	if (gpio_is_valid(omap_up_info->DTR_gpio) &&
 	    omap_up_info->DTR_present) {
 		up->DTR_gpio = omap_up_info->DTR_gpio;
 		up->DTR_inverted = omap_up_info->DTR_inverted;
 	} else
 		up->DTR_gpio = -EINVAL;
+#endif
 	up->DTR_active = 0;
 
 	up->dev = &pdev->dev;
 	up->port.dev = &pdev->dev;
-	up->port.type = PORT_OMAP;
+	up->port.type = PORT_16550A;
 	up->port.iotype = UPIO_MEM;
 	up->port.irq = irq->start;
 
@@ -1651,12 +1661,14 @@ static int serial_omap_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_port_line;
 	}
+		up->port.line = 0;
+	printk("Here 3\n");
 
 	ret = serial_omap_probe_rs485(up, pdev->dev.of_node);
 	if (ret < 0)
 		goto err_rs485;
 
-	sprintf(up->name, "OMAP UART%d", up->port.line);
+	sprintf(up->name, "MY UART%d", up->port.line);
 	up->port.mapbase = mem->start;
 	up->port.membase = devm_ioremap(&pdev->dev, mem->start,
 						resource_size(mem));
@@ -1665,6 +1677,7 @@ static int serial_omap_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_ioremap;
 	}
+	printk("Here 4\n");
 
 	up->port.flags = omap_up_info->flags;
 	up->port.uartclk = omap_up_info->uartclk;
@@ -1673,13 +1686,16 @@ static int serial_omap_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "No clock speed specified: using default:"
 						"%d\n", DEFAULT_CLK_SPEED);
 	}
+	printk("Here 5\n");
 
 	up->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
 	up->calc_latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
+#if 0
 	pm_qos_add_request(&up->pm_qos_request,
 		PM_QOS_CPU_DMA_LATENCY, up->latency);
 	serial_omap_uart_wq = create_singlethread_workqueue(up->name);
 	INIT_WORK(&up->qos_work, serial_omap_uart_qos_work);
+#endif
 
 	platform_set_drvdata(pdev, up);
 	if (omap_up_info->autosuspend_timeout == 0)
@@ -1694,14 +1710,17 @@ static int serial_omap_probe(struct platform_device *pdev)
 
 	pm_runtime_get_sync(&pdev->dev);
 
+	printk("Here 6\n");
 	omap_serial_fill_features_erratas(up);
 
 	ui[up->port.line] = up;
-	serial_omap_add_console_port(up);
+	//serial_omap_add_console_port(up);
+	printk("Here 7\n");
 
 	ret = uart_add_one_port(&serial_omap_reg, &up->port);
 	if (ret != 0)
 		goto err_add_port;
+	printk("Here 8\n");
 
 	pm_runtime_mark_last_busy(up->dev);
 	pm_runtime_put_autosuspend(up->dev);
@@ -1725,7 +1744,7 @@ static int serial_omap_remove(struct platform_device *dev)
 	pm_runtime_put_sync(up->dev);
 	pm_runtime_disable(up->dev);
 	uart_remove_one_port(&serial_omap_reg, &up->port);
-	pm_qos_remove_request(&up->pm_qos_request);
+	//pm_qos_remove_request(&up->pm_qos_request);
 
 	return 0;
 }
@@ -1827,7 +1846,7 @@ static int serial_omap_runtime_suspend(struct device *dev)
 	}
 
 	up->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
-	schedule_work(&up->qos_work);
+	//schedule_work(&up->qos_work);
 
 	return 0;
 }
@@ -1846,7 +1865,7 @@ static int serial_omap_runtime_resume(struct device *dev)
 		serial_omap_restore_context(up);
 	}
 	up->latency = up->calc_latency;
-	schedule_work(&up->qos_work);
+	//schedule_work(&up->qos_work);
 
 	return 0;
 }
@@ -1862,9 +1881,7 @@ static const struct dev_pm_ops serial_omap_dev_pm_ops = {
 
 #if defined(CONFIG_OF)
 static const struct of_device_id omap_serial_of_match[] = {
-	{ .compatible = "ti,omap2-uart" },
-	{ .compatible = "ti,omap3-uart" },
-	{ .compatible = "ti,omap4-uart" },
+	{ .compatible = "ti,my-uart" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, omap_serial_of_match);
@@ -1874,7 +1891,7 @@ static struct platform_driver serial_omap_driver = {
 	.probe          = serial_omap_probe,
 	.remove         = serial_omap_remove,
 	.driver		= {
-		.name	= DRIVER_NAME,
+		.name	= DRIVER_NAME1,
 		.pm	= &serial_omap_dev_pm_ops,
 		.of_match_table = of_match_ptr(omap_serial_of_match),
 	},

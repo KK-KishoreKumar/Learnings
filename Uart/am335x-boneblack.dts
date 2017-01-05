@@ -251,7 +251,7 @@
 		};
 
 		serial@48022000 {
-			compatible = "ti,omap3-uart";
+			compatible = "ti,my-uart";
 			ti,hwmods = "uart2";
 			clock-frequency = <0x2dc6c00>;
 			reg = <0x48022000 0x2000>;
@@ -1085,6 +1085,7 @@
 		i2c0_pins = "/pinmux@44e10800/pinmux_i2c0_pins";
 		i2c2_pins = "/pinmux@44e10800/pinmux_i2c2_pins";
 		uart0_pins = "/pinmux@44e10800/pinmux_uart0_pins";
+		uart1_pins = "/pinmux@44e10800/pinmux_uart1_pins";
 		clkout2_pin = "/pinmux@44e10800/pinmux_clkout2_pin";
 		cpsw_default = "/pinmux@44e10800/cpsw_default";
 		cpsw_sleep = "/pinmux@44e10800/cpsw_sleep";
