@@ -713,11 +713,6 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk/13);
 	quot = serial_omap_get_divisor(port, baud);
 
-	/* calculate wakeup latency constraint */
-	up->calc_latency = (USEC_PER_SEC * up->port.fifosize) / (baud / 8);
-	up->latency = up->calc_latency;
-	//schedule_work(&up->qos_work);
-
 	up->dll = quot & 0xff;
 	up->dlh = quot >> 8;
 	up->mdr1 = UART_OMAP_MDR1_DISABLE;
@@ -1230,13 +1225,12 @@ static int serial_omap_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_port_line;
 	}
-		up->port.line = 0;
+	up->port.line = 0;
 
 	sprintf(up->name, "MY UART%d", up->port.line);
 	up->port.mapbase = mem->start;
 	up->port.membase = devm_ioremap(&pdev->dev, mem->start,
 						resource_size(mem));
-	printk("Here 3\n");
 	if (!up->port.membase) {
 		dev_err(&pdev->dev, "can't ioremap UART\n");
 		ret = -ENOMEM;
@@ -1251,14 +1245,9 @@ static int serial_omap_probe(struct platform_device *pdev)
 						"%d\n", DEFAULT_CLK_SPEED);
 	}
 
-	up->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
-	up->calc_latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
-
 	platform_set_drvdata(pdev, up);
 	printk("Here 4\n");
-	if (omap_up_info->autosuspend_timeout == 0)
-		omap_up_info->autosuspend_timeout = -1;
-	device_init_wakeup(up->dev, true);
+	//device_init_wakeup(up->dev, true);
 	printk("Here 5\n");
 
 	omap_serial_fill_features_erratas(up);
