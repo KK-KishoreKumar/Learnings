@@ -34,19 +34,25 @@ MODULE_LICENSE("GPL");
 #define TINY_SERIAL_NAME	"ttytiny"
 #define MY_NAME	TINY_SERIAL_NAME
 static struct timer_list my_timer;
+
+#define FUNC_ENTER() do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
 static void tiny_stop_tx(struct uart_port *port)
 {
+	FUNC_ENTER();
 }
 static void tiny_stop_rx(struct uart_port *port)
 {
+	FUNC_ENTER();
 }
 static void tiny_enable_ms(struct uart_port *port)
 {
+	FUNC_ENTER();
 }
 static void tiny_tx_chars(struct uart_port *port)
 {
 	struct circ_buf *xmit = &port->state->xmit;
 	int count;
+	FUNC_ENTER();
 	if (port->x_char) {
 		printk("wrote %2x", port->x_char);
 		port->icount.tx++;
@@ -72,6 +78,7 @@ static void tiny_tx_chars(struct uart_port *port)
 }
 static void tiny_start_tx(struct uart_port *port)
 {
+	FUNC_ENTER();
 }
 static void tiny_timer(unsigned long data)
 {
@@ -80,6 +87,7 @@ static void tiny_timer(unsigned long data)
 	struct tty_port *tty_port;
 	port = (struct uart_port *)data;
 	int i;
+	FUNC_ENTER();
 #if 1
 	if (!port)
 		return;
@@ -108,22 +116,27 @@ static void tiny_timer(unsigned long data)
 }
 static unsigned int tiny_tx_empty(struct uart_port *port)
 {
+	FUNC_ENTER();
 	return 0;
 }
 static unsigned int tiny_get_mctrl(struct uart_port *port)
 {
+	FUNC_ENTER();
 	return 0;
 }
 static void tiny_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
+	FUNC_ENTER();
 }
 static void tiny_break_ctl(struct uart_port *port, int break_state)
 {
+	FUNC_ENTER();
 }
 static void tiny_set_termios(struct uart_port *port,
 		struct ktermios *new, struct ktermios *old)
 {
 	int baud, quot, cflag = new->c_cflag;
+	FUNC_ENTER();
 	/* get the byte size */
 	switch (cflag & CSIZE) {
 		case CS5:
@@ -165,6 +178,7 @@ static void tiny_set_termios(struct uart_port *port,
 }
 static int tiny_startup(struct uart_port *port)
 {
+	FUNC_ENTER();
 	/* this is the first time this port is opened */
 	/* do any hardware initialization needed here */
 	/* create our timer and submit it */
@@ -191,6 +205,7 @@ static int tiny_startup(struct uart_port *port)
 }
 static void tiny_shutdown(struct uart_port *port)
 {
+	FUNC_ENTER();
 	/* The port is being closed by the last user. */
 	/* Do any hardware specific stuff here */
 	/* shut down our timer */
@@ -198,20 +213,25 @@ static void tiny_shutdown(struct uart_port *port)
 }
 static const char *tiny_type(struct uart_port *port)
 {
+	FUNC_ENTER();
 	return "tinytty";
 }
 static void tiny_release_port(struct uart_port *port)
 {
+	FUNC_ENTER();
 }
 static int tiny_request_port(struct uart_port *port)
 {
+	FUNC_ENTER();
 	return 0;
 }
 static void tiny_config_port(struct uart_port *port, int flags)
 {
+	FUNC_ENTER();
 }
 static int tiny_verify_port(struct uart_port *port, struct serial_struct *ser)
 {
+	FUNC_ENTER();
 	return 0;
 }
 static struct uart_ops tiny_ops = {
