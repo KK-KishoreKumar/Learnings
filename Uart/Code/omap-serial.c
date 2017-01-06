@@ -856,49 +856,6 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_out(up, UART_MCR, up->mcr | UART_MCR_TCRTLR);
 
 	serial_out(up, UART_TI752_TCR, OMAP_UART_TCR_TRIG);
-
-	if (termios->c_cflag & CRTSCTS && up->port.flags & UPF_HARD_FLOW) {
-		/* Enable AUTORTS and AUTOCTS */
-		up->efr |= UART_EFR_CTS | UART_EFR_RTS;
-
-		/* Ensure MCR RTS is asserted */
-		up->mcr |= UART_MCR_RTS;
-	} else {
-		/* Disable AUTORTS and AUTOCTS */
-		up->efr &= ~(UART_EFR_CTS | UART_EFR_RTS);
-	}
-
-	if (up->port.flags & UPF_SOFT_FLOW) {
-		/* clear SW control mode bits */
-		up->efr &= OMAP_UART_SW_CLR;
-
-		/*
-		 * IXON Flag:
-		 * Enable XON/XOFF flow control on input.
-		 * Receiver compares XON1, XOFF1.
-		 */
-		if (termios->c_iflag & IXON)
-			up->efr |= OMAP_UART_SW_RX;
-
-		/*
-		 * IXOFF Flag:
-		 * Enable XON/XOFF flow control on output.
-		 * Transmit XON1, XOFF1
-		 */
-		if (termios->c_iflag & IXOFF)
-			up->efr |= OMAP_UART_SW_TX;
-
-		/*
-		 * IXANY Flag:
-		 * Enable any character to restart output.
-		 * Operation resumes after receiving any
-		 * character after recognition of the XOFF character
-		 */
-		if (termios->c_iflag & IXANY)
-			up->mcr |= UART_MCR_XONANY;
-		else
-			up->mcr &= ~UART_MCR_XONANY;
-	}
 	serial_out(up, UART_MCR, up->mcr);
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 	serial_out(up, UART_EFR, up->efr);
@@ -919,24 +876,6 @@ static int serial_omap_request_port(struct uart_port *port)
 {
 	dev_dbg(port->dev, "serial_omap_request_port+\n");
 	return 0;
-}
-
-static void serial_omap_config_port(struct uart_port *port, int flags)
-{
-	struct uart_omap_port *up = to_uart_omap_port(port);
-
-	dev_dbg(up->port.dev, "serial_omap_config_port+%d\n",
-							up->port.line);
-	up->port.type = PORT_OMAP;
-	up->port.flags |= UPF_SOFT_FLOW | UPF_HARD_FLOW;
-}
-
-static int
-serial_omap_verify_port(struct uart_port *port, struct serial_struct *ser)
-{
-	/* we don't want the core code to modify any port params */
-	dev_dbg(port->dev, "serial_omap_verify_port+\n");
-	return -EINVAL;
 }
 
 static const char *
@@ -1030,8 +969,8 @@ static struct uart_ops serial_omap_pops = {
 	.type		= serial_omap_type,
 	.release_port	= serial_omap_release_port,
 	.request_port	= serial_omap_request_port,
-	.config_port	= serial_omap_config_port,
-	.verify_port	= serial_omap_verify_port,
+	//.config_port	= serial_omap_config_port,
+//	.verify_port	= serial_omap_verify_port,
 #ifdef CONFIG_CONSOLE_POLL
 	.poll_put_char  = serial_omap_poll_put_char,
 	.poll_get_char  = serial_omap_poll_get_char,
