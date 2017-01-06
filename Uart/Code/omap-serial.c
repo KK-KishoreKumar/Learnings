@@ -180,8 +180,6 @@ struct uart_omap_port {
 
 static struct uart_omap_port *ui[OMAP_MAX_HSUART_PORTS];
 
-/* Forward declaration of functions */
-static void serial_omap_mdr1_errataset(struct uart_omap_port *up, u8 mdr1);
 
 static inline unsigned int serial_in(struct uart_omap_port *up, int offset)
 {
@@ -824,10 +822,6 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_A);
 
 	/* Protocol, Baud Rate, and Interrupt Settings */
-
-	if (up->errata & UART_ERRATA_i202_MDR1_ACCESS)
-		serial_omap_mdr1_errataset(up, up->mdr1);
-	else
 		serial_out(up, UART_OMAP_MDR1, up->mdr1);
 
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
@@ -851,18 +845,10 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 		up->mdr1 = UART_OMAP_MDR1_13X_MODE;
 	else
 		up->mdr1 = UART_OMAP_MDR1_16X_MODE;
-
-	if (up->errata & UART_ERRATA_i202_MDR1_ACCESS)
-		serial_omap_mdr1_errataset(up, up->mdr1);
-	else
 		serial_out(up, UART_OMAP_MDR1, up->mdr1);
 
 	/* Configure flow control */
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
-
-	/* XON1/XOFF1 accessible mode B, TCRTLR=0, ECB=0 */
-	serial_out(up, UART_XON1, termios->c_cc[VSTART]);
-	serial_out(up, UART_XOFF1, termios->c_cc[VSTOP]);
 
 	/* Enable access to TCR/TLR */
 	serial_out(up, UART_EFR, up->efr | UART_EFR_ECB);
@@ -1060,100 +1046,6 @@ static struct uart_driver serial_omap_reg = {
 	.cons		= NULL,
 };
 
-#ifdef CONFIG_PM_SLEEP
-static int serial_omap_prepare(struct device *dev)
-{
-	struct uart_omap_port *up = dev_get_drvdata(dev);
-
-	up->is_suspending = true;
-
-	return 0;
-}
-
-static void serial_omap_complete(struct device *dev)
-{
-	struct uart_omap_port *up = dev_get_drvdata(dev);
-
-	up->is_suspending = false;
-}
-
-static int serial_omap_suspend(struct device *dev)
-{
-	struct uart_omap_port *up = dev_get_drvdata(dev);
-
-	uart_suspend_port(&serial_omap_reg, &up->port);
-
-	return 0;
-}
-
-static int serial_omap_resume(struct device *dev)
-{
-	struct uart_omap_port *up = dev_get_drvdata(dev);
-
-	uart_resume_port(&serial_omap_reg, &up->port);
-
-	return 0;
-}
-#else
-#define serial_omap_prepare NULL
-#define serial_omap_complete NULL
-#endif /* CONFIG_PM_SLEEP */
-
-static void omap_serial_fill_features_erratas(struct uart_omap_port *up)
-{
-	u32 mvr, scheme;
-	u16 revision, major, minor;
-
-	mvr = readl(up->port.membase + (UART_OMAP_MVER << up->port.regshift));
-
-	/* Check revision register scheme */
-	scheme = mvr >> OMAP_UART_MVR_SCHEME_SHIFT;
-
-	switch (scheme) {
-	case 0: /* Legacy Scheme: OMAP2/3 */
-		/* MINOR_REV[0:4], MAJOR_REV[4:7] */
-		major = (mvr & OMAP_UART_LEGACY_MVR_MAJ_MASK) >>
-					OMAP_UART_LEGACY_MVR_MAJ_SHIFT;
-		minor = (mvr & OMAP_UART_LEGACY_MVR_MIN_MASK);
-		break;
-	case 1:
-		/* New Scheme: OMAP4+ */
-		/* MINOR_REV[0:5], MAJOR_REV[8:10] */
-		major = (mvr & OMAP_UART_MVR_MAJ_MASK) >>
-					OMAP_UART_MVR_MAJ_SHIFT;
-		minor = (mvr & OMAP_UART_MVR_MIN_MASK);
-		break;
-	default:
-		dev_warn(up->dev,
-			"Unknown %s revision, defaulting to highest\n",
-			up->name);
-		/* highest possible revision */
-		major = 0xff;
-		minor = 0xff;
-	}
-
-	/* normalize revision for the driver */
-	revision = UART_BUILD_REVISION(major, minor);
-
-	switch (revision) {
-	case OMAP_UART_REV_46:
-		up->errata |= (UART_ERRATA_i202_MDR1_ACCESS |
-				UART_ERRATA_i291_DMA_FORCEIDLE);
-		break;
-	case OMAP_UART_REV_52:
-		up->errata |= (UART_ERRATA_i202_MDR1_ACCESS |
-				UART_ERRATA_i291_DMA_FORCEIDLE);
-		up->features |= OMAP_UART_WER_HAS_TX_WAKEUP;
-		break;
-	case OMAP_UART_REV_63:
-		up->errata |= UART_ERRATA_i202_MDR1_ACCESS;
-		up->features |= OMAP_UART_WER_HAS_TX_WAKEUP;
-		break;
-	default:
-		break;
-	}
-}
-
 static struct omap_uart_port_info *of_get_uart_port_info(struct device *dev)
 {
 	struct omap_uart_port_info *omap_up_info;
@@ -1246,12 +1138,6 @@ static int serial_omap_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, up);
-	printk("Here 4\n");
-	//device_init_wakeup(up->dev, true);
-	printk("Here 5\n");
-
-	omap_serial_fill_features_erratas(up);
-	printk("Here 6\n");
 
 	ui[up->port.line] = up;
 
@@ -1277,40 +1163,6 @@ static int serial_omap_remove(struct platform_device *dev)
 	uart_remove_one_port(&serial_omap_reg, &up->port);
 
 	return 0;
-}
-
-/*
- * Work Around for Errata i202 (2430, 3430, 3630, 4430 and 4460)
- * The access to uart register after MDR1 Access
- * causes UART to corrupt data.
- *
- * Need a delay =
- * 5 L4 clock cycles + 5 UART functional clock cycle (@48MHz = ~0.2uS)
- * give 10 times as much
- */
-static void serial_omap_mdr1_errataset(struct uart_omap_port *up, u8 mdr1)
-{
-	u8 timeout = 255;
-
-	serial_out(up, UART_OMAP_MDR1, mdr1);
-	udelay(2);
-	serial_out(up, UART_FCR, up->fcr | UART_FCR_CLEAR_XMIT |
-			UART_FCR_CLEAR_RCVR);
-	/*
-	 * Wait for FIFO to empty: when empty, RX_FIFO_E bit is 0 and
-	 * TX_FIFO_E bit is 1.
-	 */
-	while (UART_LSR_THRE != (serial_in(up, UART_LSR) &
-				(UART_LSR_THRE | UART_LSR_DR))) {
-		timeout--;
-		if (!timeout) {
-			/* Should *never* happen. we warn and carry on */
-			dev_crit(up->dev, "Errata i202: timedout %x\n",
-						serial_in(up, UART_LSR));
-			break;
-		}
-		udelay(1);
-	}
 }
 
 
