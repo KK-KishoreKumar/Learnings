@@ -322,31 +322,11 @@ static void serial_omap_start_tx(struct uart_port *port)
 	serial_omap_enable_ier_thri(up);
 }
 
-static void serial_omap_throttle(struct uart_port *port)
-{
-	struct uart_omap_port *up = to_uart_omap_port(port);
-	unsigned long flags;
-
-	spin_lock_irqsave(&up->port.lock, flags);
-	up->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
-	serial_out(up, UART_IER, up->ier);
-	spin_unlock_irqrestore(&up->port.lock, flags);
-}
-
-static void serial_omap_unthrottle(struct uart_port *port)
-{
-	struct uart_omap_port *up = to_uart_omap_port(port);
-	unsigned long flags;
-
-	spin_lock_irqsave(&up->port.lock, flags);
-	up->ier |= UART_IER_RLSI | UART_IER_RDI;
-	serial_out(up, UART_IER, up->ier);
-	spin_unlock_irqrestore(&up->port.lock, flags);
-}
 
 static unsigned int check_modem_status(struct uart_omap_port *up)
 {
 	unsigned int status;
+	printk("Modem Status\n");
 
 	status = serial_in(up, UART_MSR);
 	status |= up->msr_saved_flags;
@@ -513,62 +493,11 @@ static unsigned int serial_omap_tx_empty(struct uart_port *port)
 
 static unsigned int serial_omap_get_mctrl(struct uart_port *port)
 {
-	struct uart_omap_port *up = to_uart_omap_port(port);
-	unsigned int status;
-	unsigned int ret = 0;
-
-	status = check_modem_status(up);
-
-	dev_dbg(up->port.dev, "serial_omap_get_mctrl+%d\n", up->port.line);
-
-	if (status & UART_MSR_DCD)
-		ret |= TIOCM_CAR;
-	if (status & UART_MSR_RI)
-		ret |= TIOCM_RNG;
-	if (status & UART_MSR_DSR)
-		ret |= TIOCM_DSR;
-	if (status & UART_MSR_CTS)
-		ret |= TIOCM_CTS;
-	return ret;
+	return 0;
 }
 
 static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
-	struct uart_omap_port *up = to_uart_omap_port(port);
-	unsigned char mcr = 0, old_mcr;
-
-	dev_dbg(up->port.dev, "serial_omap_set_mctrl+%d\n", up->port.line);
-	if (mctrl & TIOCM_RTS)
-		mcr |= UART_MCR_RTS;
-	if (mctrl & TIOCM_DTR)
-		mcr |= UART_MCR_DTR;
-	if (mctrl & TIOCM_OUT1)
-		mcr |= UART_MCR_OUT1;
-	if (mctrl & TIOCM_OUT2)
-		mcr |= UART_MCR_OUT2;
-	if (mctrl & TIOCM_LOOP)
-		mcr |= UART_MCR_LOOP;
-
-	old_mcr = serial_in(up, UART_MCR);
-	old_mcr &= ~(UART_MCR_LOOP | UART_MCR_OUT2 | UART_MCR_OUT1 |
-		     UART_MCR_DTR | UART_MCR_RTS);
-	up->mcr = old_mcr | mcr;
-	serial_out(up, UART_MCR, up->mcr);
-}
-
-static void serial_omap_break_ctl(struct uart_port *port, int break_state)
-{
-	struct uart_omap_port *up = to_uart_omap_port(port);
-	unsigned long flags = 0;
-
-	dev_dbg(up->port.dev, "serial_omap_break_ctl+%d\n", up->port.line);
-	spin_lock_irqsave(&up->port.lock, flags);
-	if (break_state == -1)
-		up->lcr |= UART_LCR_SBC;
-	else
-		up->lcr &= ~UART_LCR_SBC;
-	serial_out(up, UART_LCR, up->lcr);
-	spin_unlock_irqrestore(&up->port.lock, flags);
 }
 
 static int serial_omap_startup(struct uart_port *port)
@@ -592,8 +521,6 @@ static int serial_omap_startup(struct uart_port *port)
 	 * (they will be reenabled in set_termios())
 	 */
 	serial_omap_clear_fifos(up);
-	/* For Hardware flow control */
-	serial_out(up, UART_MCR, UART_MCR_RTS);
 
 	/*
 	 * Clear the interrupt registers.
@@ -608,13 +535,6 @@ static int serial_omap_startup(struct uart_port *port)
 	 * Now, initialize the UART
 	 */
 	serial_out(up, UART_LCR, UART_LCR_WLEN8);
-	spin_lock_irqsave(&up->port.lock, flags);
-	/*
-	 * Most PC uarts need OUT2 raised to enable interrupts.
-	 */
-	up->port.mctrl |= TIOCM_OUT2;
-	serial_omap_set_mctrl(&up->port, up->port.mctrl);
-	spin_unlock_irqrestore(&up->port.lock, flags);
 
 	up->msr_saved_flags = 0;
 	/*
@@ -919,6 +839,23 @@ static inline void wait_for_xmitr(struct uart_omap_port *up)
 		}
 	}
 }
+static void serial_omap_config_port(struct uart_port *port, int flags)
+{
+	        struct uart_omap_port *up = to_uart_omap_port(port);
+
+		        dev_dbg(up->port.dev, "serial_omap_config_port+%d\n",
+					                                                        up->port.line);
+			        up->port.type = PORT_OMAP;
+				        //up->port.flags |= UPF_SOFT_FLOW | UPF_HARD_FLOW;
+					}
+
+static int
+serial_omap_verify_port(struct uart_port *port, struct serial_struct *ser)
+{
+	        /* we don't want the core code to modify any port params */
+	        dev_dbg(port->dev, "serial_omap_verify_port+\n");
+		        return -EINVAL;
+}
 
 #ifdef CONFIG_CONSOLE_POLL
 
@@ -958,23 +895,15 @@ static struct uart_ops serial_omap_pops = {
 	.get_mctrl	= serial_omap_get_mctrl,
 	.stop_tx	= serial_omap_stop_tx,
 	.start_tx	= serial_omap_start_tx,
-	.throttle	= serial_omap_throttle,
-	.unthrottle	= serial_omap_unthrottle,
 	.stop_rx	= serial_omap_stop_rx,
-	.enable_ms	= serial_omap_enable_ms,
-	.break_ctl	= serial_omap_break_ctl,
 	.startup	= serial_omap_startup,
 	.shutdown	= serial_omap_shutdown,
 	.set_termios	= serial_omap_set_termios,
 	.type		= serial_omap_type,
 	.release_port	= serial_omap_release_port,
 	.request_port	= serial_omap_request_port,
-	//.config_port	= serial_omap_config_port,
-//	.verify_port	= serial_omap_verify_port,
-#ifdef CONFIG_CONSOLE_POLL
-	.poll_put_char  = serial_omap_poll_put_char,
-	.poll_get_char  = serial_omap_poll_get_char,
-#endif
+	.config_port	= serial_omap_config_port,
+	.verify_port	= serial_omap_verify_port,
 };
 
 static struct uart_driver serial_omap_reg = {
