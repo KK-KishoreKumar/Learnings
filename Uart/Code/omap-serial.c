@@ -245,15 +245,6 @@ serial_omap_get_divisor(struct uart_port *port, unsigned int baud)
 	return port->uartclk/(baud * divisor);
 }
 
-static void serial_omap_enable_ms(struct uart_port *port)
-{
-	struct uart_omap_port *up = to_uart_omap_port(port);
-
-	dev_dbg(up->port.dev, "serial_omap_enable_ms+%d\n", up->port.line);
-
-	up->ier |= UART_IER_MSI;
-	serial_out(up, UART_IER, up->ier);
-}
 
 static void serial_omap_stop_tx(struct uart_port *port)
 {
@@ -320,36 +311,6 @@ static void serial_omap_start_tx(struct uart_port *port)
 {
 	struct uart_omap_port *up = to_uart_omap_port(port);
 	serial_omap_enable_ier_thri(up);
-}
-
-
-static unsigned int check_modem_status(struct uart_omap_port *up)
-{
-	unsigned int status;
-	printk("Modem Status\n");
-
-	status = serial_in(up, UART_MSR);
-	status |= up->msr_saved_flags;
-	up->msr_saved_flags = 0;
-	if ((status & UART_MSR_ANY_DELTA) == 0)
-		return status;
-
-	if (status & UART_MSR_ANY_DELTA && up->ier & UART_IER_MSI &&
-	    up->port.state != NULL) {
-		if (status & UART_MSR_TERI)
-			up->port.icount.rng++;
-		if (status & UART_MSR_DDSR)
-			up->port.icount.dsr++;
-		if (status & UART_MSR_DDCD)
-			uart_handle_dcd_change
-				(&up->port, status & UART_MSR_DCD);
-		if (status & UART_MSR_DCTS)
-			uart_handle_cts_change
-				(&up->port, status & UART_MSR_CTS);
-		wake_up_interruptible(&up->port.state->port.delta_msr_wait);
-	}
-
-	return status;
 }
 
 static void serial_omap_rlsi(struct uart_omap_port *up, unsigned int lsr)
@@ -676,13 +637,14 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if ((termios->c_cflag & CREAD) == 0)
 		up->port.ignore_status_mask |= UART_LSR_DR;
-
+#if 0
 	/*
 	 * Modem status interrupts
 	 */
 	up->ier &= ~UART_IER_MSI;
 	if (UART_ENABLE_MS(&up->port, termios->c_cflag))
 		up->ier |= UART_IER_MSI;
+#endif
 	serial_out(up, UART_IER, up->ier);
 	serial_out(up, UART_LCR, cval);		/* reset DLAB */
 	up->lcr = cval;
