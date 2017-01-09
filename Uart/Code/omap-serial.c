@@ -282,6 +282,7 @@ static void transmit_chars(struct uart_omap_port *up, unsigned int lsr)
 	}
 	count = up->port.fifosize / 4;
 	do {
+		//printk("%c\t", xmit->buf[xmit->tail]);
 		serial_out(up, UART_TX, xmit->buf[xmit->tail]);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		up->port.icount.tx++;
@@ -310,7 +311,8 @@ static inline void serial_omap_enable_ier_thri(struct uart_omap_port *up)
 static void serial_omap_start_tx(struct uart_port *port)
 {
 	struct uart_omap_port *up = to_uart_omap_port(port);
-	serial_omap_enable_ier_thri(up);
+	transmit_chars(up, 0);
+	//serial_omap_enable_ier_thri(up);
 }
 
 static void serial_omap_rlsi(struct uart_omap_port *up, unsigned int lsr)
@@ -404,11 +406,9 @@ static irqreturn_t serial_omap_irq(int irq, void *dev_id)
 
 		/* extract IRQ type from IIR register */
 		type = iir & 0x3e;
+		printk("iir = %x\n", iir);
 
 		switch (type) {
-		case UART_IIR_MSI:
-			check_modem_status(up);
-			break;
 		case UART_IIR_THRI:
 			transmit_chars(up, lsr);
 			break;
@@ -418,7 +418,7 @@ static irqreturn_t serial_omap_irq(int irq, void *dev_id)
 			serial_omap_rdi(up, lsr);
 			break;
 		case UART_IIR_RLSI:
-			serial_omap_rlsi(up, lsr);
+			//serial_omap_rlsi(up, lsr);
 			break;
 		case UART_IIR_CTS_RTS_DSR:
 			/* simply try again */
@@ -637,14 +637,7 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if ((termios->c_cflag & CREAD) == 0)
 		up->port.ignore_status_mask |= UART_LSR_DR;
-#if 0
-	/*
-	 * Modem status interrupts
-	 */
-	up->ier &= ~UART_IER_MSI;
-	if (UART_ENABLE_MS(&up->port, termios->c_cflag))
-		up->ier |= UART_IER_MSI;
-#endif
+
 	serial_out(up, UART_IER, up->ier);
 	serial_out(up, UART_LCR, cval);		/* reset DLAB */
 	up->lcr = cval;
@@ -660,7 +653,7 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_out(up, UART_DLL, 0);
 	serial_out(up, UART_DLM, 0);
 	serial_out(up, UART_LCR, 0);
-
+#if 0
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 
 	up->efr = serial_in(up, UART_EFR) & ~UART_EFR_ECB;
@@ -701,13 +694,12 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_out(up, UART_MCR, up->mcr);
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 	serial_out(up, UART_EFR, up->efr);
-	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_A);
+#endif
 
 	/* Protocol, Baud Rate, and Interrupt Settings */
-		serial_out(up, UART_OMAP_MDR1, up->mdr1);
 
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
-	serial_out(up, UART_EFR, up->efr | UART_EFR_ECB);
+	//serial_out(up, UART_EFR, up->efr | UART_EFR_ECB);
 
 	serial_out(up, UART_LCR, 0);
 	serial_out(up, UART_IER, 0);
@@ -720,30 +712,24 @@ serial_omap_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_out(up, UART_IER, up->ier);
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 
-	serial_out(up, UART_EFR, up->efr);
+	//serial_out(up, UART_EFR, up->efr);
 	serial_out(up, UART_LCR, cval);
 
-	if (!serial_omap_baud_is_mode16(port, baud))
-		up->mdr1 = UART_OMAP_MDR1_13X_MODE;
-	else
-		up->mdr1 = UART_OMAP_MDR1_16X_MODE;
-		serial_out(up, UART_OMAP_MDR1, up->mdr1);
-
 	/* Configure flow control */
-	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
+	//serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 
 	/* Enable access to TCR/TLR */
-	serial_out(up, UART_EFR, up->efr | UART_EFR_ECB);
-	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_A);
-	serial_out(up, UART_MCR, up->mcr | UART_MCR_TCRTLR);
+	//serial_out(up, UART_EFR, up->efr | UART_EFR_ECB);
+	//serial_out(up, UART_LCR, UART_LCR_CONF_MODE_A);
+	//serial_out(up, UART_MCR, up->mcr | UART_MCR_TCRTLR);
 
-	serial_out(up, UART_TI752_TCR, OMAP_UART_TCR_TRIG);
-	serial_out(up, UART_MCR, up->mcr);
-	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
-	serial_out(up, UART_EFR, up->efr);
+	//serial_out(up, UART_TI752_TCR, OMAP_UART_TCR_TRIG);
+	//serial_out(up, UART_MCR, up->mcr);
+	//serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
+	//serial_out(up, UART_EFR, up->efr);
 	serial_out(up, UART_LCR, up->lcr);
 
-	serial_omap_set_mctrl(&up->port, up->port.mctrl);
+	//serial_omap_set_mctrl(&up->port, up->port.mctrl);
 
 	spin_unlock_irqrestore(&up->port.lock, flags);
 	dev_dbg(up->port.dev, "serial_omap_set_termios+%d\n", up->port.line);
