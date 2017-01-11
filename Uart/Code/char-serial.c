@@ -42,6 +42,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_data/serial-omap.h>
+#include "my_serial.h"
 
 #include <dt-bindings/gpio/gpio.h>
 
@@ -105,6 +106,8 @@
 #define OMAP_UART_TCR_TRIG	0x0F
 #define DRIVER_NAME1	"my_uart"
 
+DECLARE_WAIT_QUEUE_HEAD(my_wq);
+#if 0
 struct uart_omap_dma {
 	u8			uart_dma_tx;
 	u8			uart_dma_rx;
@@ -175,6 +178,7 @@ struct uart_omap_port {
 	struct work_struct	qos_work;
 	bool			is_suspending;
 };
+#endif
 
 #define to_uart_omap_port(p)	((container_of((p), struct uart_omap_port, port)))
 
@@ -265,11 +269,14 @@ static void serial_omap_stop_rx(struct uart_port *port)
 	serial_out(up, UART_IER, up->ier);
 }
 
-static void transmit_chars(struct uart_omap_port *up, unsigned int lsr)
+static void transmit_chars(struct uart_omap_port *up, char ch)
 {
 	struct circ_buf *xmit = &up->port.state->xmit;
 	int count;
 
+	while ((serial_in(up, UART_LSR) & UART_LSR_THRE) == 0);
+	serial_out(up, UART_TX, ch);
+#if 0
 	if (up->port.x_char) {
 		serial_out(up, UART_TX, up->port.x_char);
 		up->port.icount.tx++;
@@ -298,6 +305,7 @@ static void transmit_chars(struct uart_omap_port *up, unsigned int lsr)
 
 	if (uart_circ_empty(xmit))
 		serial_omap_stop_tx(&up->port);
+#endif
 }
 
 static inline void serial_omap_enable_ier_thri(struct uart_omap_port *up)
@@ -368,8 +376,12 @@ static void serial_read(struct uart_omap_port *up, unsigned char *t)
 {
 	unsigned char ch = 0;
 
-	up->ier = UART_IER_RDI;
+	up->ier |= UART_IER_RDI;
 	serial_out(up, UART_IER, up->ier);
+	wait_event_interruptible(wq, flag == 1);
+	up->ier &= ~UART_IER_RDI;
+	serial_out(up, UART_IER, up->ier);
+	flag = 0;
 
 	if (!(serial_in(up, UART_LSR) & UART_LSR_DR))
 		return;
@@ -384,7 +396,6 @@ static void serial_read(struct uart_omap_port *up, unsigned char *t)
 
 	//uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
 }
-DECLARE_WAIT_QUEUE_HEAD(my_wq);
 /**
  * serial_omap_irq() - This handles the interrupt from one port
  * @irq: uart port irq number
@@ -1092,7 +1103,7 @@ static int serial_omap_probe(struct platform_device *pdev)
 
 	ui[up->port.line] = up;
 
-	ret = uart_add_one_port(&serial_omap_reg, &up->port);
+	//ret = uart_add_one_port(&serial_omap_reg, &up->port);
 	if (ret != 0)
 		goto err_add_port;
 	fcd_init(omap);
@@ -1112,7 +1123,8 @@ static int serial_omap_remove(struct platform_device *dev)
 {
 	struct uart_omap_port *up = platform_get_drvdata(dev);
 
-	uart_remove_one_port(&serial_omap_reg, &up->port);
+	//uart_remove_one_port(&serial_omap_reg, &up->port);
+	fcd_exit();
 
 	return 0;
 }
@@ -1139,10 +1151,11 @@ static struct platform_driver serial_omap_driver = {
 static int __init serial_omap_init(void)
 {
 	int ret;
-
+#if 0
 	ret = uart_register_driver(&serial_omap_reg);
 	if (ret != 0)
 		return ret;
+#endif
 	ret = platform_driver_register(&serial_omap_driver);
 	if (ret != 0)
 		uart_unregister_driver(&serial_omap_reg);
@@ -1152,7 +1165,7 @@ static int __init serial_omap_init(void)
 static void __exit serial_omap_exit(void)
 {
 	platform_driver_unregister(&serial_omap_driver);
-	uart_unregister_driver(&serial_omap_reg);
+	//uart_unregister_driver(&serial_omap_reg);
 }
 
 module_init(serial_omap_init);

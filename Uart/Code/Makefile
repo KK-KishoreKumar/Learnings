@@ -13,9 +13,12 @@ clean:
 # kernel build system and can use its language.
 else
 
-	src-m := $(notdir $(wildcard ${SUBDIRS}/*.c))
-	src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
-	src-m := $(filter-out ${src-mod}, ${src-m})
-	obj-m := $(src-m:.c=.o)
+	#src-m := $(notdir $(wildcard ${SUBDIRS}/*.c))
+	#src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
+	#src-m := $(filter-out ${src-mod}, ${src-m})
+	#obj-m := $(src-m:.c=.o)
+	obj-m := serial.o
+        serial-y := final_char_driver.o char-serial.o
+
 
 endif

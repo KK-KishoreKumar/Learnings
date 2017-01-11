@@ -4,6 +4,8 @@
 #include <linux/device.h>
 #include <linux/errno.h>
 #include <asm/uaccess.h>
+#include <linux/platform_data/serial-omap.h>
+#include "my_serial.h"
 
 #define FIRST_MINOR 0
 #define MINOR_CNT 1
@@ -11,6 +13,7 @@
 static dev_t dev;
 static struct cdev c_dev;
 static struct class *cl;
+static struct uart_omap_port *omap_port;
 
 static int my_open(struct inode *i, struct file *f)
 {
@@ -27,6 +30,7 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off
 {
 	if (*off == 0)
 	{
+		serial_read(omap_port, &c);
 		if (copy_to_user(buf, &c, 1))
 		{
 			return -EFAULT;
@@ -43,7 +47,8 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff
 	{
 		return -EFAULT;
 	}
-	return len;
+	transmit_chars(omap_port, c);
+	return 1;
 }
 
 static struct file_operations driver_fops =
@@ -55,10 +60,11 @@ static struct file_operations driver_fops =
 	.write = my_write
 };
 
-static int fcd_init(void)
+static int fcd_init(struct uart_omap_port *up)
 {
 	int ret;
 	struct device *dev_ret;
+	omap_port = up;
 
 	if ((ret = alloc_chrdev_region(&dev, FIRST_MINOR, MINOR_CNT, "uart_driver")) < 0)
 	{
