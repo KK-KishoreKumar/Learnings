@@ -14,29 +14,50 @@ static dev_t dev;
 static struct cdev c_dev;
 static struct class *cl;
 static struct uart_omap_port *omap_port;
+static char flg = 0;
 
 static int my_open(struct inode *i, struct file *f)
 {
+	return serial_omap_startup(&omap_port->port);
+#if 0
+	if (!flg)
+	{
+	//serial_open(&omap_port->port);
+	serial_omap_startup(&omap_port->port);
+	flg++;
+	}
+#endif
 	return 0;
 }
 static int my_close(struct inode *i, struct file *f)
 {
 	return 0;
+#if 0
+	flg--;
+	if (!flg)
+	{
+		serial_omap_shutdown(&omap_port->port);
+	}
+	return 0;
+#endif
 }
 
 static char c = 'A';
+static char str[10];
 
 static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
 	if (*off == 0)
 	{
-		serial_read(omap_port, &c);
-		if (copy_to_user(buf, &c, 1))
+		if (len > 10)
+			len = 10;
+		len = serial_read(omap_port, str, len);
+		if (copy_to_user(buf, &str, len))
 		{
 			return -EFAULT;
 		}
 		*off += 1;
-		return 1;
+		return len;
 	}
 	else
 		return 0;
@@ -47,8 +68,10 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff
 	{
 		return -EFAULT;
 	}
-	transmit_chars(omap_port, c);
-	return 1;
+	//transmit_chars(omap_port, c);
+	serial_omap_start_tx(&omap_port->port);
+	*off = 0;
+	return len;
 }
 
 static struct file_operations driver_fops =
@@ -60,7 +83,7 @@ static struct file_operations driver_fops =
 	.write = my_write
 };
 
-static int fcd_init(struct uart_omap_port *up)
+int fcd_init(struct uart_omap_port *up)
 {
 	int ret;
 	struct device *dev_ret;
@@ -96,12 +119,13 @@ static int fcd_init(struct uart_omap_port *up)
 	return 0;
 }
 
-static void fcd_exit(void)
+void fcd_exit(void)
 {
 	device_destroy(cl, dev);
 	class_destroy(cl);
 	cdev_del(&c_dev);
 	unregister_chrdev_region(dev, MINOR_CNT);
+	serial_omap_shutdown(&omap_port->port);
 }
 
 #if 0
