@@ -14,36 +14,15 @@ static dev_t dev;
 static struct cdev c_dev;
 static struct class *cl;
 static struct uart_omap_port *omap_port;
-static char flg = 0;
 
 static int my_open(struct inode *i, struct file *f)
 {
 	return serial_omap_startup(&omap_port->port);
-#if 0
-	if (!flg)
-	{
-	//serial_open(&omap_port->port);
-	serial_omap_startup(&omap_port->port);
-	flg++;
-	}
-#endif
-	return 0;
 }
 static int my_close(struct inode *i, struct file *f)
 {
 	return 0;
-#if 0
-	flg--;
-	if (!flg)
-	{
-		serial_omap_shutdown(&omap_port->port);
-	}
-	return 0;
-#endif
 }
-
-static char c = 'A';
-//static char str[10];
 
 static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
@@ -74,7 +53,6 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff
 	{
 		return -EFAULT;
 	}
-	//transmit_chars(omap_port, c);
 	serial_omap_start_tx(&omap_port->port);
 	*off = 0;
 	return len;
@@ -134,11 +112,3 @@ void fcd_exit(void)
 	serial_omap_shutdown(&omap_port->port);
 }
 
-#if 0
-module_init(fcd_init);
-module_exit(fcd_exit);
-
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Sysplay Workshops");
-MODULE_DESCRIPTION("A Character Driver");
-#endif
