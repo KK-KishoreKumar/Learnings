@@ -43,16 +43,19 @@ static int my_close(struct inode *i, struct file *f)
 }
 
 static char c = 'A';
-static char str[10];
+//static char str[10];
 
 static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
+	char *str = omap_port->rx_buff;
 	if (*off == 0)
 	{
 		if (len > 10)
 			len = 10;
-		len = serial_read(omap_port, str, len);
-		if (copy_to_user(buf, &str, len))
+		len = serial_read(omap_port, len);
+		if (len <= 0)
+			return -EAGAIN;
+		if (copy_to_user(buf, str, len))
 		{
 			return -EFAULT;
 		}
@@ -64,7 +67,10 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off
 }
 static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
-	if (copy_from_user(&c, buf + len - 1, 1))
+	char *str = omap_port->tx_buff;
+	int count = ((len > omap_port->tx_size)? omap_port->tx_size : len);
+	omap_port->port.icount.tx = count;
+	if (copy_from_user(str, buf, count))
 	{
 		return -EFAULT;
 	}

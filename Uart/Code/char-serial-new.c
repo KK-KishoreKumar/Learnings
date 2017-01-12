@@ -280,9 +280,6 @@ static void serial_omap_stop_rx(struct uart_port *port)
 
 static void transmit_chars(struct uart_omap_port *up, unsigned int lsr)
 {
-	struct circ_buf *xmit = &up->port.state->xmit;
-	int count;
-	char c = 'A';
 	FUNC_ENTER();
 #if 0
 	if (up->port.x_char) {
@@ -296,14 +293,12 @@ static void transmit_chars(struct uart_omap_port *up, unsigned int lsr)
 		return;
 	}
 #endif
-	count = up->port.fifosize / 4;
-	do {
-		serial_out(up, UART_TX, c);
-		//xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
-		//up->port.icount.tx++;
-		//if (uart_circ_empty(xmit))
-		//	break;
-	} while (--count > 0);
+	int count = up->port.icount.tx, i;
+	for (i = 0; i < count; i++)
+	{
+		printk("%c\t", up->tx_buff[i]);
+		serial_out(up, UART_TX, up->tx_buff[i]);
+	}
 	serial_omap_stop_tx(&up->port);
 #if 0
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS) {
@@ -382,17 +377,19 @@ static void serial_omap_rlsi(struct uart_omap_port *up, unsigned int lsr)
 	uart_insert_char(&up->port, lsr, UART_LSR_OE, 0, flag);
 }
 
-int serial_read(struct uart_omap_port *up, unsigned char *t, size_t len)
+int serial_read(struct uart_omap_port *up, size_t len)
 {
 	int count, i;
 	if (up->port.icount.rx < len)
 		count = up->port.icount.rx;
 	else
 		count = len;
+#if 1
 	for (i = 0; i < count; i++) {
 		printk("%c\t", up->rx_buff[i]);
-		t[i] = up->rx_buff[i];
+		//t[i] = up->rx_buff[i];
 	}
+#endif
 	up->port.icount.rx -= count;
 	return count;
 }		
@@ -570,9 +567,10 @@ int serial_omap_startup(struct uart_port *port)
 	termios.c_cflag = CS8 | B115200 | CREAD;
 	termios.c_iflag = IGNBRK | IGNPAR;
 	serial_omap_set_termios(&up->port, &termios, NULL);
-	//up->rx_buff = kmalloc(up->rx_size, GFP_KERNEL);
 	up->rx_size = 10;
 	up->rx_buff = devm_kzalloc(up->dev, up->rx_size, GFP_KERNEL);
+	up->tx_size = 10;
+	up->tx_buff = devm_kzalloc(up->dev, up->rx_size, GFP_KERNEL);
 	return 0;
 }
 

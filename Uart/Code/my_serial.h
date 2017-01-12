@@ -72,10 +72,12 @@ struct uart_omap_port {
 	bool			is_suspending;
 	char *rx_buff;
 	size_t rx_size;
+	char *tx_buff;
+	size_t tx_size;
 };
 
 //void transmit_chars(struct uart_omap_port *up, char ch);
-int serial_read(struct uart_omap_port *up, unsigned char *t, size_t len);
+int serial_read(struct uart_omap_port *up, size_t len);
 int fcd_init(struct uart_omap_port *up);
 void fcd_exit(void);
 int serial_open(struct uart_port *port);
