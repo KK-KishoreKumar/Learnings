@@ -98,11 +98,19 @@
 			linux,phandle = <0x4>;
 			phandle = <0x4>;
 		};
+
 		pinmux_spi0_pins { 
             		pinctrl-single,pins = <0x150 0x30 0x154 0x30 0x158 0x10 0x15C 0x10>; 
-			linux,phandle = <0x90>;
-			phandle = <0x90>;
+			linux,phandle = <0x71>;
+			phandle = <0x71>;
  		};
+
+		pinmux_uart1_pins {
+			pinctrl-single,pins = <0x180 0x30 0x184 0x0>;
+			linux,phandle = <0x70>;
+			phandle = <0x70>;
+		};
+
 
 		pinmux_clkout2_pin {
 			pinctrl-single,pins = <0x1b4 0x3>;
@@ -249,12 +257,14 @@
 		};
 
 		serial@48022000 {
-			compatible = "ti,omap3-uart";
+			compatible = "ti,my-uart";
 			ti,hwmods = "uart2";
 			clock-frequency = <0x2dc6c00>;
 			reg = <0x48022000 0x2000>;
 			interrupts = <0x49>;
-			status = "disabled";
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <0x70>;
 			linux,phandle = <0x22>;
 			phandle = <0x22>;
 		};
@@ -316,84 +326,6 @@
 			clock-frequency = <0x61a80>;
 			linux,phandle = <0x1c>;
 			phandle = <0x1c>;
-
-			tps@24 {
-				reg = <0x24>;
-				compatible = "ti,tps65217";
-				linux,phandle = <0x27>;
-				phandle = <0x27>;
-
-				regulators {
-					#address-cells = <0x1>;
-					#size-cells = <0x0>;
-
-					regulator@0 {
-						reg = <0x0>;
-						regulator-compatible = "dcdc1";
-						regulator-always-on;
-						linux,phandle = <0x28>;
-						phandle = <0x28>;
-					};
-
-					regulator@1 {
-						reg = <0x1>;
-						regulator-compatible = "dcdc2";
-						regulator-name = "vdd_mpu";
-						regulator-min-microvolt = <0xe1d48>;
-						regulator-max-microvolt = <0x1437c8>;
-						regulator-boot-on;
-						regulator-always-on;
-						linux,phandle = <0x2>;
-						phandle = <0x2>;
-					};
-
-					regulator@2 {
-						reg = <0x2>;
-						regulator-compatible = "dcdc3";
-						regulator-name = "vdd_core";
-						regulator-min-microvolt = <0xe1d48>;
-						regulator-max-microvolt = <0x118c30>;
-						regulator-boot-on;
-						regulator-always-on;
-						linux,phandle = <0x29>;
-						phandle = <0x29>;
-					};
-
-					regulator@3 {
-						reg = <0x3>;
-						regulator-compatible = "ldo1";
-						regulator-always-on;
-						linux,phandle = <0x2a>;
-						phandle = <0x2a>;
-					};
-
-					regulator@4 {
-						reg = <0x4>;
-						regulator-compatible = "ldo2";
-						regulator-always-on;
-						linux,phandle = <0x2b>;
-						phandle = <0x2b>;
-					};
-
-					regulator@5 {
-						reg = <0x5>;
-						regulator-compatible = "ldo3";
-						regulator-always-on;
-						regulator-min-microvolt = <0x1b7740>;
-						regulator-max-microvolt = <0x1b7740>;
-						linux,phandle = <0x2c>;
-						phandle = <0x2c>;
-					};
-
-					regulator@6 {
-						reg = <0x6>;
-						regulator-compatible = "ldo4";
-						regulator-always-on;
-						linux,phandle = <0x2d>;
-						phandle = <0x2d>;
-					};
-				};
-			};
 
 			baseboard_eeprom@50 {
 				compatible = "at,24c256";
@@ -640,7 +572,7 @@
 			dma-names = "tx0", "rx0", "tx1", "rx1";
 			status = "okay";
 			pinctrl-names = "default";
-			pinctrl-0 = <0x90>;
+			pinctrl-0 = <0x71>;
 			linux,phandle = <0x3e>;
 			phandle = <0x3e>;
 			spidev@0 {
@@ -1034,10 +966,6 @@
 			default-state = "off";
 		};
 	};
-	my-leds {
-		compatible = "my-led";
-		led-number = <0x38>;
-	};
 
 	fixedregulator@0 {
 		compatible = "regulator-fixed";
@@ -1170,6 +1098,7 @@
 		i2c0_pins = "/pinmux@44e10800/pinmux_i2c0_pins";
 		i2c2_pins = "/pinmux@44e10800/pinmux_i2c2_pins";
 		uart0_pins = "/pinmux@44e10800/pinmux_uart0_pins";
+		uart1_pins = "/pinmux@44e10800/pinmux_uart1_pins";
 		spi0_pins = "/pinmux@44e10800/pinmux_spi0_pins";
 		clkout2_pin = "/pinmux@44e10800/pinmux_clkout2_pin";
 		cpsw_default = "/pinmux@44e10800/cpsw_default";
