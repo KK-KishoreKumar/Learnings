@@ -99,28 +99,8 @@
 
 #define OMAP2_MCSPI_WAKEUPENABLE_WKEN	BIT(0)
 
-//#define FUNC_ENTER() do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
-#define FUNC_ENTER() //do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
-/* We have 2 DMA channels per CS, one for RX and one for TX */
-struct omap2_mcspi_dma {
-	struct dma_chan *dma_tx;
-	struct dma_chan *dma_rx;
-
-	int dma_tx_sync_dev;
-	int dma_rx_sync_dev;
-
-	struct completion dma_tx_completion;
-	struct completion dma_rx_completion;
-
-	char dma_rx_ch_name[14];
-	char dma_tx_ch_name[14];
-};
-
-/* use PIO for small transfers, avoiding DMA setup/teardown overhead and
- * cache operations; better heuristics consider wordsize and bitrate.
- */
-#define DMA_MIN_BYTES			160
-
+#define FUNC_ENTER() do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
+//#define FUNC_ENTER() //do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
 
 /*
  * Used for context save and restore, structure members to be updated whenever
@@ -138,7 +118,6 @@ struct omap2_mcspi {
 	void __iomem		*base;
 	unsigned long		phys;
 	/* SPI1 has 4 channels, while SPI2 has 2 */
-	struct omap2_mcspi_dma	*dma_channels;
 	struct device		*dev;
 	struct omap2_mcspi_regs ctx;
 	int			fifo_depth;
@@ -337,6 +316,8 @@ omap2_mcspi_txrx_pio(struct spi_device *spi, struct spi_transfer *xfer)
 	void __iomem		*rx_reg;
 	void __iomem		*chstat_reg;
 	int			word_len;
+	u8		*rx;
+	const u8	*tx;
 	FUNC_ENTER();
 
 	mcspi = spi_master_get_devdata(spi->master);
@@ -355,61 +336,59 @@ omap2_mcspi_txrx_pio(struct spi_device *spi, struct spi_transfer *xfer)
 	if (c < (word_len>>3))
 		return 0;
 
-		u8		*rx;
-		const u8	*tx;
 
-		rx = xfer->rx_buf;
-		tx = xfer->tx_buf;
+	rx = xfer->rx_buf;
+	tx = xfer->tx_buf;
 
-		do {
-			c -= 1;
-			if (tx != NULL) {
-				//printk("In tx != NULL\n");
-				if (mcspi_wait_for_reg_bit(chstat_reg,
+	do {
+		c -= 1;
+		if (tx != NULL) {
+			//printk("In tx != NULL\n");
+			if (mcspi_wait_for_reg_bit(chstat_reg,
 						OMAP2_MCSPI_CHSTAT_TXS) < 0) {
-					dev_err(&spi->dev, "TXS timed out\n");
-					goto out;
-				}
-				dev_vdbg(&spi->dev, "write-%d %02x\n",
-						word_len, *tx);
-				__raw_writel(*tx++, tx_reg);
+				dev_err(&spi->dev, "TXS timed out\n");
+				goto out;
 			}
-			if (rx != NULL) {
-				if (mcspi_wait_for_reg_bit(chstat_reg,
+			dev_vdbg(&spi->dev, "write-%d %02x\n",
+					word_len, *tx);
+			__raw_writel(*tx++, tx_reg);
+		}
+		if (rx != NULL) {
+			if (mcspi_wait_for_reg_bit(chstat_reg,
 						OMAP2_MCSPI_CHSTAT_RXS) < 0) {
-					dev_err(&spi->dev, "RXS timed out\n");
-					goto out;
-				}
+				dev_err(&spi->dev, "RXS timed out\n");
+				goto out;
+			}
 
-				if (c == 1 && tx == NULL &&
-				    (l & OMAP2_MCSPI_CHCONF_TURBO)) {
-					omap2_mcspi_set_enable(spi, 0);
-					*rx++ = __raw_readl(rx_reg);
-					dev_vdbg(&spi->dev, "read-%d %02x\n",
-						    word_len, *(rx - 1));
-					if (mcspi_wait_for_reg_bit(chstat_reg,
-						OMAP2_MCSPI_CHSTAT_RXS) < 0) {
-						dev_err(&spi->dev,
-							"RXS timed out\n");
-						goto out;
-					}
-					c = 0;
-				} else if (c == 0 && tx == NULL) {
-					omap2_mcspi_set_enable(spi, 0);
-				}
-
+			if (c == 1 && tx == NULL &&
+					(l & OMAP2_MCSPI_CHCONF_TURBO)) {
+				omap2_mcspi_set_enable(spi, 0);
 				*rx++ = __raw_readl(rx_reg);
 				dev_vdbg(&spi->dev, "read-%d %02x\n",
 						word_len, *(rx - 1));
+				if (mcspi_wait_for_reg_bit(chstat_reg,
+							OMAP2_MCSPI_CHSTAT_RXS) < 0) {
+					dev_err(&spi->dev,
+							"RXS timed out\n");
+					goto out;
+				}
+				c = 0;
+			} else if (c == 0 && tx == NULL) {
+				omap2_mcspi_set_enable(spi, 0);
 			}
-		} while (c);
+
+			*rx++ = __raw_readl(rx_reg);
+			dev_vdbg(&spi->dev, "read-%d %02x\n",
+					word_len, *(rx - 1));
+		}
+	} while (c);
 	/* for TX_ONLY mode, be sure all words have shifted out */
 	if (xfer->rx_buf == NULL) {
 		if (mcspi_wait_for_reg_bit(chstat_reg,
-				OMAP2_MCSPI_CHSTAT_TXS) < 0) {
+					OMAP2_MCSPI_CHSTAT_TXS) < 0) {
 			dev_err(&spi->dev, "TXS timed out\n");
 		} else if (mcspi_wait_for_reg_bit(chstat_reg,
-				OMAP2_MCSPI_CHSTAT_EOT) < 0)
+					OMAP2_MCSPI_CHSTAT_EOT) < 0)
 			dev_err(&spi->dev, "EOT timed out\n");
 
 		/* disable chan to purge rx datas received in TX_ONLY transfer,
@@ -540,7 +519,6 @@ static int omap2_mcspi_setup(struct spi_device *spi)
 static void omap2_mcspi_cleanup(struct spi_device *spi)
 {
 	struct omap2_mcspi	*mcspi;
-	struct omap2_mcspi_dma	*mcspi_dma;
 	struct omap2_mcspi_cs	*cs;
 	FUNC_ENTER();
 
@@ -568,10 +546,9 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 	struct spi_device		*spi;
 	struct spi_transfer		*t = NULL;
 	struct spi_master		*master;
-	struct omap2_mcspi_dma		*mcspi_dma;
 	int				cs_active = 0;
 	struct omap2_mcspi_cs		*cs;
-	struct omap2_mcspi_device_config *cd;
+	//struct omap2_mcspi_device_config *cd;
 	int				par_override = 0;
 	int				status = 0;
 	u32				chconf;
@@ -579,9 +556,7 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 
 	spi = m->spi;
 	master = spi->master;
-	mcspi_dma = mcspi->dma_channels + spi->chip_select;
 	cs = spi->controller_state;
-	cd = spi->controller_data;
 
 	omap2_mcspi_set_enable(spi, 0);
 	list_for_each_entry(t, &m->transfers, transfer_list) {
@@ -597,14 +572,6 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 			if (!t->speed_hz && !t->bits_per_word)
 				par_override = 0;
 		}
-		if (cd && cd->cs_per_word) {
-			chconf = mcspi->ctx.modulctrl;
-			chconf &= ~OMAP2_MCSPI_MODULCTRL_SINGLE;
-			mcspi_write_reg(master, OMAP2_MCSPI_MODULCTRL, chconf);
-			mcspi->ctx.modulctrl =
-				mcspi_read_cs_reg(spi, OMAP2_MCSPI_MODULCTRL);
-		}
-
 
 		if (!cs_active) {
 			omap2_mcspi_force_cs(spi, 1);
@@ -619,12 +586,6 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 			chconf |= OMAP2_MCSPI_CHCONF_TRM_RX_ONLY;
 		else if (t->rx_buf == NULL)
 			chconf |= OMAP2_MCSPI_CHCONF_TRM_TX_ONLY;
-
-		if (cd && cd->turbo_mode && t->tx_buf == NULL) {
-			/* Turbo mode is for more than one word */
-			if (t->len > ((cs->word_len + 7) >> 3))
-				chconf |= OMAP2_MCSPI_CHCONF_TURBO;
-		}
 
 		mcspi_write_chconf0(spi, chconf);
 
@@ -668,14 +629,6 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 
 	if (cs_active)
 		omap2_mcspi_force_cs(spi, 0);
-
-	if (cd && cd->cs_per_word) {
-		chconf = mcspi->ctx.modulctrl;
-		chconf |= OMAP2_MCSPI_MODULCTRL_SINGLE;
-		mcspi_write_reg(master, OMAP2_MCSPI_MODULCTRL, chconf);
-		mcspi->ctx.modulctrl =
-			mcspi_read_cs_reg(spi, OMAP2_MCSPI_MODULCTRL);
-	}
 
 	omap2_mcspi_set_enable(spi, 0);
 
@@ -733,7 +686,6 @@ static int omap2_mcspi_master_setup(struct omap2_mcspi *mcspi)
 {
 	struct spi_master	*master = mcspi->master;
 	struct omap2_mcspi_regs	*ctx = &mcspi->ctx;
-	int			ret = 0;
 	FUNC_ENTER();
 	mcspi_write_reg(master, OMAP2_MCSPI_WAKEUPENABLE,
 			OMAP2_MCSPI_WAKEUPENABLE_WKEN);
@@ -770,7 +722,7 @@ static int omap2_mcspi_probe(struct platform_device *pdev)
 	const struct omap2_mcspi_platform_config *pdata;
 	struct omap2_mcspi	*mcspi;
 	struct resource		*r;
-	int			status = 0, i;
+	int			status = 0;
 	u32			regs_offset = 0;
 	static int		bus_num = 1;
 	struct device_node	*node = pdev->dev.of_node;
@@ -854,7 +806,6 @@ static int omap2_mcspi_remove(struct platform_device *pdev)
 {
 	struct spi_master	*master;
 	struct omap2_mcspi	*mcspi;
-	struct omap2_mcspi_dma	*dma_channels;
 
 	master = platform_get_drvdata(pdev);
 	mcspi = spi_master_get_devdata(master);
