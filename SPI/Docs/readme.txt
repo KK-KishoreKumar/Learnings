@@ -12,7 +12,7 @@ https://github.com/beagleboard/bb.org-overlays/blob/master/src/arm/BB-SPI0-MCP30
 http://www.hertaville.com/interfacing-an-spi-adc-mcp3008-chip-to-the-raspberry-pi-using-c.html (Connection for POT with MCP3008)
 https://learn.adafruit.com/reading-a-analog-in-and-controlling-audio-volume-with-the-raspberry-pi/connecting-the-cobbler-to-a-mcp3008 (connetions in detail)
 https://learn.adafruit.com/reading-a-analog-in-and-controlling-audio-volume-with-the-raspberry-pi (Nice tutorial on MCP3008 connections)
-
+https://in.mathworks.com/help/supportpkg/beagleboneio/ug/use-the-beaglebone-black-spi-interface-to-connect-to-a-device.html?requestedDomain=www.mathworks.com (Connection of SPI devices)
 
 
 
