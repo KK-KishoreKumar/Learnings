@@ -50,6 +50,7 @@
 #define SPI_AUTOSUSPEND_TIMEOUT		2000
 
 #define OMAP2_MCSPI_REVISION		0x00
+#define OMAP2_MCSPI_SYSCONFIG		0x10
 #define OMAP2_MCSPI_SYSSTATUS		0x14
 #define OMAP2_MCSPI_IRQSTATUS		0x18
 #define OMAP2_MCSPI_IRQENABLE		0x1c
@@ -57,7 +58,8 @@
 #define OMAP2_MCSPI_SYST		0x24
 #define OMAP2_MCSPI_MODULCTRL		0x28
 #define OMAP2_MCSPI_XFERLEVEL		0x7c
-
+#define OMAP_MCSPI_SYS_RESET		0x02
+#define SYSS_RESETDONE_MASK		0x01
 /* per-channel banks, 0x14 bytes each, first is: */
 #define OMAP2_MCSPI_CHCONF0		0x2c
 #define OMAP2_MCSPI_CHSTAT0		0x30
@@ -98,6 +100,8 @@
 #define OMAP2_MCSPI_CHCTRL_EN		BIT(0)
 
 #define OMAP2_MCSPI_WAKEUPENABLE_WKEN	BIT(0)
+
+#define OMAP_SPI_TIMEOUT (msecs_to_jiffies(1000))
 
 #define FUNC_ENTER() do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
 //#define FUNC_ENTER() //do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
@@ -528,14 +532,12 @@ static void omap2_mcspi_cleanup(struct spi_device *spi)
 		/* Unlink controller state from context save list */
 		cs = spi->controller_state;
 		list_del(&cs->node);
-
 		kfree(cs);
 	}
 }
 
 static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 {
-
 	/* We only enable one channel at a time -- the one whose message is
 	 * -- although this controller would gladly
 	 * arbitrate among multiple channels.  This corresponds to "single
@@ -548,7 +550,6 @@ static void omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_message *m)
 	struct spi_master		*master;
 	int				cs_active = 0;
 	struct omap2_mcspi_cs		*cs;
-	//struct omap2_mcspi_device_config *cd;
 	int				par_override = 0;
 	int				status = 0;
 	u32				chconf;
@@ -681,19 +682,16 @@ static int omap2_mcspi_transfer_one_message(struct spi_master *master,
 	spi_finalize_current_message(master);
 	return 0;
 }
-
+#if 0
 static int omap2_mcspi_master_setup(struct omap2_mcspi *mcspi)
 {
 	struct spi_master	*master = mcspi->master;
-	struct omap2_mcspi_regs	*ctx = &mcspi->ctx;
 	FUNC_ENTER();
-	mcspi_write_reg(master, OMAP2_MCSPI_WAKEUPENABLE,
-			OMAP2_MCSPI_WAKEUPENABLE_WKEN);
-	ctx->wakeupenable = OMAP2_MCSPI_WAKEUPENABLE_WKEN;
 
 	omap2_mcspi_set_master_mode(master);
 	return 0;
 }
+#endif
 
 static struct omap2_mcspi_platform_config omap2_pdata = {
 	.regs_offset = 0,
@@ -787,9 +785,7 @@ static int omap2_mcspi_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&mcspi->ctx.cs);
 
-	status = omap2_mcspi_master_setup(mcspi);
-	if (status < 0)
-		goto free_master;
+	omap2_mcspi_set_master_mode(master);
 
 	status = spi_register_master(master);
 	if (status < 0)
