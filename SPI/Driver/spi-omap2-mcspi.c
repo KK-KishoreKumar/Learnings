@@ -105,7 +105,6 @@
 #define OMAP_SPI_TIMEOUT (msecs_to_jiffies(1000))
 
 #define FUNC_ENTER() do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
-//#define FUNC_ENTER() //do { printk(KERN_INFO "Enter: %s\n", __func__); } while (0)
 
 static inline void mcspi_write_reg(struct omap2_mcspi *mcspi,
 		int idx, u32 val)
@@ -182,25 +181,9 @@ static void omap2_mcspi_set_master_mode(struct omap2_mcspi *mcspi)
 	ctx->modulctrl = l;
 }
 
-static void omap2_mcspi_set_fifo(struct omap2_mcspi *mcspi,
-				struct spi_transfer *t, int enable)
-{
-	u32 chconf;
-	FUNC_ENTER();
-	chconf = mcspi_cached_chconf0(mcspi);
-	if (t->rx_buf != NULL)
-		chconf &= ~OMAP2_MCSPI_CHCONF_FFER;
-	else
-		chconf &= ~OMAP2_MCSPI_CHCONF_FFET;
-
-	mcspi_write_chconf0(mcspi, chconf);
-	mcspi->fifo_depth = 0;
-}
-
 static int mcspi_wait_for_reg_bit(void __iomem *reg, unsigned long bit)
 {
 	unsigned long timeout;
-	//FUNC_ENTER();
 
 	timeout = jiffies + msecs_to_jiffies(1000);
 	while (!(__raw_readl(reg) & bit)) {
@@ -244,14 +227,12 @@ omap2_mcspi_txrx_pio(struct omap2_mcspi *mcspi, struct spi_transfer *xfer)
 	if (c < (word_len>>3))
 		return 0;
 
-
 	rx = xfer->rx_buf;
 	tx = xfer->tx_buf;
 
 	do {
 		c -= 1;
 		if (tx != NULL) {
-			//printk("In tx != NULL\n");
 			if (mcspi_wait_for_reg_bit(chstat_reg,
 						OMAP2_MCSPI_CHSTAT_TXS) < 0) {
 				dev_err(mcspi->dev, "TXS timed out\n");
@@ -268,20 +249,7 @@ omap2_mcspi_txrx_pio(struct omap2_mcspi *mcspi, struct spi_transfer *xfer)
 				goto out;
 			}
 
-			if (c == 1 && tx == NULL &&
-					(l & OMAP2_MCSPI_CHCONF_TURBO)) {
-				omap2_mcspi_set_enable(mcspi, 0);
-				*rx++ = __raw_readl(rx_reg);
-				dev_vdbg(mcspi->dev, "read-%d %02x\n",
-						word_len, *(rx - 1));
-				if (mcspi_wait_for_reg_bit(chstat_reg,
-							OMAP2_MCSPI_CHSTAT_RXS) < 0) {
-					dev_err(mcspi->dev,
-							"RXS timed out\n");
-					goto out;
-				}
-				c = 0;
-			} else if (c == 0 && tx == NULL) {
+			if (c == 0 && tx == NULL) {
 				omap2_mcspi_set_enable(mcspi, 0);
 			}
 
@@ -318,7 +286,6 @@ static u32 omap2_mcspi_calc_divisor(u32 speed_hz)
 	for (div = 0; div < 15; div++)
 		if (speed_hz >= (OMAP2_MCSPI_MAX_FREQ >> div))
 			return div;
-
 	return 15;
 }
 
@@ -373,12 +340,9 @@ int omap2_mcspi_setup_transfer(struct omap2_mcspi *mcspi,
 
 int omap2_mcspi_setup(struct omap2_mcspi *mcspi)
 {
-	int			ret;
 	FUNC_ENTER();
 
-	ret = omap2_mcspi_setup_transfer(mcspi, NULL);
-
-	return ret;
+	return omap2_mcspi_setup_transfer(mcspi, NULL);
 }
 
 void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi)
@@ -386,26 +350,36 @@ void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi)
 	FUNC_ENTER();
 }
 
-int omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_transfer *t)
+int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi, 
+						struct spi_transfer *t)
 {
 	int				cs_active = 0;
-	int				par_override = 0;
 	int				status = 0;
 	u32				chconf;
 	int actual_length = 0;
 	FUNC_ENTER();
+	
+	if (t == NULL)
+		return EINVAL;
 
 	omap2_mcspi_set_enable(mcspi, 0);
 	if (t->tx_buf == NULL && t->rx_buf == NULL && t->len) {
 		return -EINVAL;
 	}
-	if (par_override || t->speed_hz || t->bits_per_word) {
-		par_override = 1;
+	/* Check if the speed is withing acceptable limit */
+	if (t->speed_hz > OMAP2_MCSPI_MAX_FREQ
+			|| (t->len && !(t->rx_buf || t->tx_buf))) {
+		dev_dbg(mcspi->dev, "Speed exceeds the max supported\n");
+		return -EINVAL;
+	}
+	if (t->speed_hz && t->speed_hz < (OMAP2_MCSPI_MAX_FREQ >> 15)) {
+		dev_dbg(mcspi->dev, "speed_hz below minimum Hz\n");
+		return -EINVAL;
+	}
+	if (t->speed_hz || t->bits_per_word) {
 		status = omap2_mcspi_setup_transfer(mcspi, t);
 		if (status < 0)
 			return status;
-		if (!t->speed_hz && !t->bits_per_word)
-			par_override = 0;
 	}
 
 	if (!cs_active) {
@@ -441,9 +415,6 @@ int omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_transfer *t)
 		}
 	}
 
-	if (t->delay_usecs)
-		udelay(t->delay_usecs);
-
 	/* ignore the "leave it on after last xfer" hint */
 	if (t->cs_change) {
 		omap2_mcspi_force_cs(mcspi, 0);
@@ -452,52 +423,12 @@ int omap2_mcspi_work(struct omap2_mcspi *mcspi, struct spi_transfer *t)
 
 	omap2_mcspi_set_enable(mcspi, 0);
 
-	if (mcspi->fifo_depth > 0)
-		omap2_mcspi_set_fifo(mcspi, t, 0);
-	/* Restore defaults if they were overriden */
-	if (par_override) {
-		par_override = 0;
-		status = omap2_mcspi_setup_transfer(mcspi, NULL);
-	}
-
 	if (cs_active)
 		omap2_mcspi_force_cs(mcspi, 0);
 
 	omap2_mcspi_set_enable(mcspi, 0);
 
-	if (mcspi->fifo_depth > 0 && t)
-		omap2_mcspi_set_fifo(mcspi, t, 0);
-
 	return status;
-}
-
-int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi,
-		struct spi_transfer *t)
-{
-	int actual_length = 0;
-	const void	*tx_buf = t->tx_buf;
-	void		*rx_buf = t->rx_buf;
-	unsigned	len = t->len;
-	FUNC_ENTER();
-
-	if (t->speed_hz > OMAP2_MCSPI_MAX_FREQ
-			|| (len && !(rx_buf || tx_buf))) {
-		dev_dbg(mcspi->dev, "transfer: %d Hz, %d %s%s, %d bpw\n",
-				t->speed_hz,
-				len,
-				tx_buf ? "tx" : "",
-				rx_buf ? "rx" : "",
-				t->bits_per_word);
-		return -EINVAL;
-	}
-	if (t->speed_hz && t->speed_hz < (OMAP2_MCSPI_MAX_FREQ >> 15)) {
-		dev_dbg(mcspi->dev, "speed_hz %d below minimum %d Hz\n",
-				t->speed_hz,
-				OMAP2_MCSPI_MAX_FREQ >> 15);
-		return -EINVAL;
-	}
-
-	return omap2_mcspi_work(mcspi, t);
 }
 
 static struct omap2_mcspi_platform_config omap2_pdata = {
@@ -528,7 +459,6 @@ static int omap2_mcspi_probe(struct platform_device *pdev)
 	struct resource		*r;
 	int			status = 0;
 	u32			regs_offset = 0;
-	struct device_node	*node = pdev->dev.of_node;
 	const struct of_device_id *match;
 
 	mcspi = devm_kzalloc(&pdev->dev, sizeof(*mcspi), GFP_KERNEL);
@@ -536,15 +466,9 @@ static int omap2_mcspi_probe(struct platform_device *pdev)
 
 	match = of_match_device(omap_mcspi_of_match, &pdev->dev);
 	if (match) {
-		u32 num_cs = 1; /* default number of chipselect */
 		pdata = match->data;
-
-		of_property_read_u32(node, "ti,spi-num-cs", &num_cs);
-		if (of_get_property(node, "ti,pindir-d0-out-d1-in", NULL))
-			mcspi->pin_dir = MCSPI_PINDIR_D0_OUT_D1_IN;
 	} else {
 		pdata = dev_get_platdata(&pdev->dev);
-		mcspi->pin_dir = pdata->pin_dir;
 	}
 	regs_offset = pdata->regs_offset;
 
