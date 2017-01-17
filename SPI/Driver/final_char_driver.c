@@ -13,17 +13,15 @@
 static dev_t dev;
 static struct cdev c_dev;
 static struct class *cl;
-//static struct uart_omap_port *omap_port;
 static struct omap2_mcspi *mcspi;
-	static uint8_t bits = 8;
-	static uint32_t speed = 500000;
-	static uint16_t delay = 0;
-	static uint8_t mode = 0;
+static uint8_t bits = 8;
+static uint32_t speed = 500000;
+static uint16_t delay = 0;
+static uint8_t mode = 0;
 
 
 static int my_open(struct inode *i, struct file *f)
 {
-	//return serial_omap_startup(&omap_port->port);
 	return omap2_mcspi_setup_transfer(mcspi, NULL);
 }
 static int my_close(struct inode *i, struct file *f)

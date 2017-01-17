@@ -216,8 +216,6 @@ omap2_mcspi_txrx_pio(struct omap2_mcspi *mcspi, struct spi_transfer *xfer)
 	c = count;
 	word_len = mcspi->word_len;
 
-	l = mcspi_cached_chconf0(mcspi);
-
 	/* We store the pre-calculated register addresses on stack to speed
 	 * up the transfer loop. */
 	tx_reg		= base + OMAP2_MCSPI_TX0;
@@ -341,8 +339,6 @@ int omap2_mcspi_setup_transfer(struct omap2_mcspi *mcspi,
 int omap2_mcspi_setup(struct omap2_mcspi *mcspi)
 {
 	FUNC_ENTER();
-
-	return omap2_mcspi_setup_transfer(mcspi, NULL);
 }
 
 void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi)
@@ -353,9 +349,9 @@ void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi)
 int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi, 
 						struct spi_transfer *t)
 {
-	int				cs_active = 0;
-	int				status = 0;
-	u32				chconf;
+	int cs_active = 0;
+	int status = 0;
+	u32 chconf;
 	int actual_length = 0;
 	FUNC_ENTER();
 	
@@ -381,11 +377,13 @@ int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi,
 		if (status < 0)
 			return status;
 	}
-
+#if 0
 	if (!cs_active) {
 		omap2_mcspi_force_cs(mcspi, 1);
 		cs_active = 1;
 	}
+#endif
+	omap2_mcspi_force_cs(mcspi, 1);
 
 	chconf = mcspi_cached_chconf0(mcspi);
 	chconf &= ~OMAP2_MCSPI_CHCONF_TRM_MASK;
@@ -414,19 +412,21 @@ int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi,
 			return -EIO;
 		}
 	}
-
+#if 0
 	/* ignore the "leave it on after last xfer" hint */
 	if (t->cs_change) {
 		omap2_mcspi_force_cs(mcspi, 0);
 		cs_active = 0;
 	}
+#endif
 
 	omap2_mcspi_set_enable(mcspi, 0);
-
+#if 0
 	if (cs_active)
 		omap2_mcspi_force_cs(mcspi, 0);
+#endif
 
-	omap2_mcspi_set_enable(mcspi, 0);
+	//omap2_mcspi_set_enable(mcspi, 0);
 
 	return status;
 }
