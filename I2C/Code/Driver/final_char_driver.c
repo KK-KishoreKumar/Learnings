@@ -11,18 +11,13 @@
 #define FIRST_MINOR 0
 #define MINOR_CNT 1
 
-static dev_t dev;
-static struct cdev c_dev;
-static struct class *cl;
-//static struct omap2_i2c_dev *i2c_dev;
-
-
 static int my_open(struct inode *i, struct file *f)
 {
 	struct omap_i2c_dev *dev = container_of(i->i_cdev, struct omap_i2c_dev, cdev);
 	f->private_data = dev;
-	return 0; //omap2_mcspi_setup_transfer(mcspi, NULL);
+	return 0;
 }
+
 static int my_close(struct inode *i, struct file *f)
 {
 	return 0;
@@ -70,12 +65,12 @@ out:
 
 static ssize_t my_write(struct file *f, const char __user *buf, size_t count, loff_t *off)
 {
-	*off = 0;
 	struct omap_i2c_dev *dev = (struct omap_i2c_dev *)(f->private_data);
 	char *tmp;
 	struct i2c_msg msg;
 	int ret;
 
+	*off = 0;
 	tmp = memdup_user(buf, count);
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);
@@ -86,19 +81,6 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t count, lo
 	ret = omap_i2c_write_msg(dev, &msg, 1);
 	kfree(tmp);
 	return (ret == 0 ? count : ret);
-
-#if 0
-	char *str = omap_port->tx_buff;
-	int count = ((len > omap_port->tx_size)? omap_port->tx_size : len);
-	omap_port->port.icount.tx = count;
-
-	if (copy_from_user(str, buf, count))
-	{
-		return -EFAULT;
-	}
-	serial_omap_start_tx(&omap_port->port);
-	*off = 0;
-#endif
 }
 
 static struct file_operations driver_fops =
@@ -138,49 +120,13 @@ int fcd_init(struct omap_i2c_dev *i2c_dev)
 		unregister_chrdev_region(i2c_dev->devt, 1 );
 		return -1;
 	}
-
-#if 0
-	int ret;
-	struct device *dev_ret;
-	mcspi = lmcspi;
-
-	if ((ret = alloc_chrdev_region(&dev, FIRST_MINOR, MINOR_CNT, "spi_driver")) < 0)
-	{
-		return ret;
-	}
-
-	cdev_init(&c_dev, &driver_fops);
-
-	if ((ret = cdev_add(&c_dev, dev, MINOR_CNT)) < 0)
-	{
-		unregister_chrdev_region(dev, MINOR_CNT);
-		return ret;
-	}
-	
-	if (IS_ERR(cl = class_create(THIS_MODULE, "i2c_class")))
-	{
-		cdev_del(&c_dev);
-		unregister_chrdev_region(dev, MINOR_CNT);
-		return PTR_ERR(cl);
-	}
-	if (IS_ERR(dev_ret = device_create(cl, NULL, dev, NULL, "spi%d", FIRST_MINOR)))
-	{
-		class_destroy(cl);
-		cdev_del(&c_dev);
-		unregister_chrdev_region(dev, MINOR_CNT);
-		return PTR_ERR(dev_ret);
-	}
-#endif
-
 	return 0;
 }
 
 void fcd_exit(struct omap_i2c_dev *i2c_dev)
 {
 	device_destroy(i2c_dev->i2c_class, i2c_dev->devt);
-	//class_destroy(cl);
 	cdev_del(&i2c_dev->cdev);
 	unregister_chrdev_region(i2c_dev->devt, MINOR_CNT);
-	//serial_omap_shutdown(&omap_port->port);
 }
 
