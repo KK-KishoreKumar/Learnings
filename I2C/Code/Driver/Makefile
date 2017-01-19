@@ -1,7 +1,7 @@
 # If called directly from the command line, invoke the kernel build system.
 ifeq ($(KERNELRELEASE),)
 
-	KERNEL_SOURCE := /home/expert/Elpa/Kernel/linux-3.12.9
+	KERNEL_SOURCE := /home/pradeep/EmbeddedLinux/temp/linux-3.12.9
 	PWD := $(shell pwd)
 default:
 	$(MAKE) -C $(KERNEL_SOURCE) SUBDIRS=$(PWD) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CFLAGS=-DDEBUG
@@ -13,9 +13,11 @@ clean:
 # kernel build system and can use its language.
 else
 
-	src-m := $(notdir $(wildcard ${SUBDIRS}/*.c))
-	src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
-	src-m := $(filter-out ${src-mod}, ${src-m})
-	obj-m := $(src-m:.c=.o)
+	#src-m := $(notdir $(wildcard ${SUBDIRS}/*.c))
+	#src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
+	#src-m := $(filter-out ${src-mod}, ${src-m})
+	//obj-m := final_char_driver.o i2c-omap.o
+	obj-m := i2c.o
+        i2c-y := final_char_driver.o i2c-omap.o
 
 endif

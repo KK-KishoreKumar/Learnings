@@ -20,7 +20,7 @@ main(void) {
 		exit(1);
 	}
 	//char buf[32] = {0X00, 0X50, 0XAA, 0X55, 0X33, 0XEE};
-	char buf[32] = {0X00, 0x50, 0xAB, 0X60, 0X34, 0XAC};
+	char buf[32] = {0X00, 0x50, 0xAF, 0X80, 0X35, 0XAD};
 	float data;
 	char channel;
 	int i;
