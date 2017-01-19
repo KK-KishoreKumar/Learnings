@@ -171,8 +171,8 @@ void omap_i2c_ack_stat(struct omap_i2c_dev *dev, u16 stat);
 void flush_fifo(struct omap_i2c_dev *dev);
 
 /* Test Functions */
-int i2c_write(struct omap_i2c_dev *dev, char *buff);
-int i2c_read(struct omap_i2c_dev *dev, char *buff);
+int i2c_write(struct omap_i2c_dev *dev, char *buff, size_t len);
+int i2c_read(struct omap_i2c_dev *dev, char *buff, size_t len);
 
 /* Char Driver Interface */
 int fcd_init(struct omap_i2c_dev *i2c_dev);
