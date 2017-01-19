@@ -458,21 +458,23 @@ int omap_i2c_write_msg(struct omap_i2c_dev *dev,
 	//Check for the status - XRDY, then write the data in data register
 	//Check if ARDY is come
 	u16 w;
-	int k = 10;
+	int k = 7;
 	int i2c_error = 0, status;
 	u16 buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
+	u8 tx_buf[6] = {0x00, 0x50, 0x44};
 	buf &= ~(0x3f);
 	buf |= OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
 
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, 0x50);
-	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 1);
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 3);
+	
 	barrier();
 
 	w = (OMAP_I2C_CON_EN | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP | OMAP_I2C_CON_MST |
 			OMAP_I2C_CON_TRX);
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
-	
+	int idx = 0;
 	while (k--) {
 		status = wait_for_event(dev);
 		printk("Status = %X\n", status);
@@ -484,7 +486,7 @@ int omap_i2c_write_msg(struct omap_i2c_dev *dev,
 		if (status & OMAP_I2C_STAT_XRDY)
 		{
 			printk("Got XRDY\n");
-			omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, 0x50);
+			omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, tx_buf[idx++]);
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XRDY);
 			continue;
 		}
@@ -511,6 +513,7 @@ int omap_i2c_write_msg(struct omap_i2c_dev *dev,
  */
 int omap_i2c_read_msg(struct omap_i2c_dev *dev, struct i2c_msg *msg, int stop)
 {
+#if 0
 	u16 w;
 	u16 status;
 	u16 addr = 0X5000;
@@ -655,6 +658,7 @@ rd_exit:
 	flush_fifo(dev);
 	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, 0XFFFF);
 	return i2c_error;
+#endif
 }
 
 #ifdef CONFIG_OF
