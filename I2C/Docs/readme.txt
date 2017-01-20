@@ -27,3 +27,11 @@ Let's have a look at the registers required to program the I2C interface.
     - TXFIFO_CLR - Tx FIFO threshold value for data transfer. trigger level for data transfers. 
  + I2C_IRQENABLE_SET - XDR, RDR, ROVR, XRDY, RRDY, BF, ARDY, NACK_IE, AL_IE. 
  + I2C_IRQ_STATUS - BB, RDR, XDR, XRDY, RRDY, ARDY
+
+
+I2c-tools
+i2cdetect -y -r 1
+cat /sys/bus/i2c/devices/0-0050/modalias (driver name)
+i2cdetect -y -r 0
+i2cget -y -f 0 0x50 0x50
+od -x /sys/bus/i2c/devices/0-0050/eeprom

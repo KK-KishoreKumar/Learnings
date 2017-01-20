@@ -402,7 +402,7 @@ static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
 	 */
 
 	dev->threshold = clamp(size, (u8) 1, dev->fifo_size);
-	printk("thr = %d\n", dev->threshold);
+	//printk("thr = %d\n", dev->threshold);
 
 	buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 
@@ -429,8 +429,8 @@ static int omap_i2c_xfer_msg(struct i2c_adapter *adap,
 	unsigned long timeout;
 	u16 w;
 
-	printk("addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
-		msg->addr, msg->len, msg->flags, stop);
+	//printk("addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
+		//msg->addr, msg->len, msg->flags, stop);
 
 	if (msg->len == 0)
 		return -EINVAL;
@@ -454,7 +454,7 @@ static int omap_i2c_xfer_msg(struct i2c_adapter *adap,
 	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
 	w = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
-	printk("Stat reg = 0x%04x\n", w);
+	//printk("Stat reg = 0x%04x\n", w);
 
 	INIT_COMPLETION(dev->cmd_complete);
 	dev->cmd_err = 0;
@@ -537,7 +537,6 @@ omap_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	if (r == 0)
 		r = num;
-	printk("r = %d\n", r);
 
 	omap_i2c_wait_for_bb(dev);
 
@@ -627,7 +626,7 @@ omap_i2c_isr(int irq, void *dev_id)
 		ret = IRQ_WAKE_THREAD;
 
 	spin_unlock(&dev->lock);
-	printk("stat = %d, mask = %d\n", stat, mask);
+	//printk("stat = %x, mask = %x\n", stat, mask);
 
 	return ret;
 }
@@ -646,7 +645,6 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		bits = omap_i2c_read_reg(dev, OMAP_I2C_IE_REG);
 		stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
 		stat &= bits;
-		printk("ISR stat = %d, mask = %d\n", stat, bits);
 
 		/* If we're in receiver mode, ignore XDR/XRDY */
 		if (dev->receiver)
@@ -660,7 +658,7 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		}
 
 		dev_dbg(dev->dev, "IRQ (ISR = 0x%04x)\n", stat);
-		printk("IRQ (ISR = 0x%04x\n", stat);
+		//printk("IRQ (ISR = 0x%04x\n", stat);
 		if (count++ == 100) {
 			dev_warn(dev->dev, "Too much work in one IRQ\n");
 			break;
@@ -749,14 +747,14 @@ omap_i2c_isr_thread(int this_irq, void *dev_id)
 		}
 
 		if (stat & OMAP_I2C_STAT_ROVR) {
-			printk("Receive overrun\n");
+			//printk("Receive overrun\n");
 			err |= OMAP_I2C_STAT_ROVR;
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ROVR);
 			break;
 		}
 
 		if (stat & OMAP_I2C_STAT_XUDF) {
-			printk("Transmit Underflow\n");
+			//printk("Transmit Underflow\n");
 			err |= OMAP_I2C_STAT_XUDF;
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XUDF);
 			break;
@@ -791,7 +789,7 @@ static ssize_t my_read(struct file* f, char *buf, size_t count, loff_t *f_pos)
 	msg.flags |= I2C_M_RD;
 	msg.len = count;
 	msg.buf = tmp;
-	printk("Invoking Transfer\n");
+	//printk("Invoking Transfer\n");
 	ret = omap_i2c_xfer(adap, &msg, 1); 
 	if (ret >= 0)
 		ret = copy_to_user(buf, tmp, count) ? -EFAULT : ret;

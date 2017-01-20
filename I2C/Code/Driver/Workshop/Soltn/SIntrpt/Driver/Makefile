@@ -17,10 +17,6 @@ else
 	#src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
 	#src-m := $(filter-out ${src-mod}, ${src-m})
 	#obj-m := final_char_driver.o i2c-omap.o
-	obj-m := i2c.o
-	obj-m := single_i2c.o
-	obj-m := omap_i2c.o
-        i2c-y := final_char_driver.o i2c-omap.o
-        single_i2c-y := final_char_driver.o i2c-single.o
+	obj-m := omap_i2c.o at24-new.o
 
 endif

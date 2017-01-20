@@ -1,0 +1,4 @@
+Change the Kconfig to remove the selection of I2C
+change the configuration to disable the PM
+change the config to detach the spi and i2c driver
+change the arch/arm/mach-omap2/omap_hwmod_33xx_data.c to disable pm for modules
