@@ -333,6 +333,13 @@
 				linux,phandle = <0x17>;
 				phandle = <0x17>;
 			};
+			dummy_device@51 {
+				compatible = "at,25c256";
+				reg = <0x51>;
+				linux,phandle = <0x80>;
+				phandle = <0x80>;
+			};
+
 		};
 
 		i2c@4802a000 {
@@ -1130,6 +1137,7 @@
 		ldo3_reg = "/ocp/i2c@44e0b000/tps@24/regulators/regulator@5";
 		ldo4_reg = "/ocp/i2c@44e0b000/tps@24/regulators/regulator@6";
 		baseboard_eeprom = "/ocp/i2c@44e0b000/baseboard_eeprom@50";
+		dummy_device = "/ocp/i2c@44e0b000/dummy_device@65";
 		i2c1 = "/ocp/i2c@4802a000";
 		i2c2 = "/ocp/i2c@4819c000";
 		cape_eeprom0 = "/ocp/i2c@4819c000/cape_eeprom0@54";
