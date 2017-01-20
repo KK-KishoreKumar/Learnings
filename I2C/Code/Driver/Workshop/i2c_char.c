@@ -51,8 +51,22 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t count, loff_t *o
 	}
 
 	printk("Sending Message\n");
+	msg.addr = 0x50; //client->addr;
+	msg.flags = 0; //client->flags & I2C_M_TEN;
+	msg.len = 2;
+	msg.buf = tmp;
+	tmp[0] = 0x50;
+	tmp[1] = 0x00;
+	//ret = omap_i2c_write_msg(dev, &msg, 1);
+	ret = i2c_write(dev, &msg, 1);
+	omap_i2c_wait_for_bb(dev);
+	msg.addr = 0x50; //client->addr;
+	msg.flags = 0; //client->flags & I2C_M_TEN;
+	msg.len = count;
+	msg.buf = tmp;
+
 	//ret = omap_i2c_read_msg(dev, &msg, 1);
-	ret = i2c_read(dev, tmp, 4);
+	ret = i2c_read(dev, &msg, 1);
 
 	printk("ret = %d\n", ret);
 
@@ -80,7 +94,7 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t count, lo
 	msg.len = count;
 	msg.buf = tmp;
 	//ret = omap_i2c_write_msg(dev, &msg, 1);
-	ret = i2c_write(dev, tmp, count);
+	ret = i2c_write(dev, &msg, 1);
 	kfree(tmp);
 	return (ret == 0 ? count : ret);
 }

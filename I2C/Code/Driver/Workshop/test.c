@@ -1,6 +1,6 @@
 #include "i2c_char.h"
 
-int i2c_write(struct omap_i2c_dev *dev, char *buff, size_t len)
+int i2c_write(struct omap_i2c_dev *dev, struct i2c_msg *msg, size_t count)
 {
 	//Set the TX FIFO Threshold and clear the FIFO's
 	//Set the slave address
@@ -10,18 +10,21 @@ int i2c_write(struct omap_i2c_dev *dev, char *buff, size_t len)
 	//Check for the status - XRDY, then write the data in data register
 	//Check if ARDY is come
 	u16 w;
-	int k = 7;
+	int k = msg->len + 4;
+	//int k = 7;
 	int i2c_error = 0, status;
 	int idx = 0;
 	u16 buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
-	u8 tx_buf[6] = {0x00, 0x50};
+	//u8 tx_buf[6] = {0x00, 0x50, 0x44};
+	u8 *tx_buf = msg->buf;
 	buf &= ~(0x3f);
 	buf |= OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
 
-	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, 0x50);
-	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 2);
-	
+	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
+	//omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, 0x50);
+	//omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 3);
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, msg->len);
 
 	w = (OMAP_I2C_CON_EN | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP | OMAP_I2C_CON_MST |
 			OMAP_I2C_CON_TRX);
@@ -60,7 +63,7 @@ wr_exit:
 
 }
 
-int i2c_read(struct omap_i2c_dev *dev, char *buff, size_t len)
+int i2c_read(struct omap_i2c_dev *dev, struct i2c_msg *msg, size_t len)
 {	
 	//Set the RX FIFO Threshold and clear the FIFO's
 	//Set the slave address
@@ -70,17 +73,18 @@ int i2c_read(struct omap_i2c_dev *dev, char *buff, size_t len)
 	//Check for the status - RRDY, then write the data in data register
 	//Check if ARDY is come
 	u16 w;
-	int k = 7;
+	int k = msg->len + 4;
 	int i2c_error = 0, status;
 	int idx = 0;
 	u16 buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
 	//u8 tx_buf[6] = {0x00, 0x50, 0x44};
+	u8 *rx_buf = msg->buf;
 	buf &= ~(0x3f << 8);
 	buf |= OMAP_I2C_BUF_RXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
 
-	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, 0x50);
-	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 3);
+	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, msg->len);
 
 	w = (OMAP_I2C_CON_EN | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP | OMAP_I2C_CON_MST);
 	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
@@ -96,8 +100,8 @@ int i2c_read(struct omap_i2c_dev *dev, char *buff, size_t len)
 		if (status & OMAP_I2C_STAT_RRDY)
 		{
 			printk("Got RRDY\n");
-			buff[idx] = omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
-			printk("temp %d = %x\n", idx, buff[idx]);
+			rx_buf[idx] = omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
+			printk("temp %d = %x\n", idx, rx_buf[idx]);
 			idx++;
 			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RRDY);
 			continue;
