@@ -14,13 +14,13 @@ int i2c_write(struct omap_i2c_dev *dev, char *buff, size_t len)
 	int i2c_error = 0, status;
 	int idx = 0;
 	u16 buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
-	u8 tx_buf[6] = {0x00, 0x50, 0x44};
+	u8 tx_buf[6] = {0x00, 0x50};
 	buf &= ~(0x3f);
 	buf |= OMAP_I2C_BUF_TXFIF_CLR;
 	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
 
 	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, 0x50);
-	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 3);
+	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, 2);
 	
 
 	w = (OMAP_I2C_CON_EN | OMAP_I2C_CON_STT | OMAP_I2C_CON_STP | OMAP_I2C_CON_MST |
