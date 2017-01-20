@@ -362,6 +362,12 @@ static void omap_i2c_set_speed(struct omap_i2c_dev *dev)
 static int omap_i2c_init(struct omap_i2c_dev *dev)
 {
 	omap_i2c_set_speed(dev);
+	dev->iestate = 0;
+	dev->iestate = (OMAP_I2C_IE_XRDY | OMAP_I2C_IE_RRDY |
+			OMAP_I2C_IE_ARDY | OMAP_I2C_IE_NACK |
+			OMAP_I2C_IE_AL)  | ((dev->fifo_size) ?
+				(OMAP_I2C_IE_RDR | OMAP_I2C_IE_XDR) : 0);
+
 	__omap_i2c_init(dev);
 
 	return 0;
