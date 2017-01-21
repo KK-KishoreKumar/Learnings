@@ -32,8 +32,8 @@ static int my_close(struct inode *i, struct file *f)
 static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
 	//char *str = omap_port->rx_buff;
-	uint8_t tx[] = {0x80, 0x90};
-	uint8_t rx[] = {0x00, 0x00};
+	uint8_t tx[] = {0x01, 0x80, 0x00, 0x01, 0x80};
+	uint8_t rx[] = {0x00, 0x00, 0x00, 0x00, 0x00};
 
 	//if (*off == 0)
 	//{
@@ -46,7 +46,7 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off
 			.bits_per_word = bits,
 		};
 		omap2_mcspi_transfer_one_message(mcspi, &t);
-		printk("%d\t %d\n", rx[0], rx[1]);
+		printk("%d\t %d\t %d\t", rx[0], rx[1], rx[2]);
 		//if (len > 10)
 		//	len = 10;
 		//len = serial_read(omap_port, len);

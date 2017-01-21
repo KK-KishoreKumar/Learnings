@@ -61,6 +61,7 @@ int fcd_init(struct omap2_mcspi *mcspi);
 void fcd_exit(void);
 int omap2_mcspi_setup_transfer(struct omap2_mcspi *mcspi, struct spi_transfer *t);
 void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi);
+int omap2_mcspi_setup(struct omap2_mcspi *mcspi);
 int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi,
 		struct spi_transfer *t);
 #if 0

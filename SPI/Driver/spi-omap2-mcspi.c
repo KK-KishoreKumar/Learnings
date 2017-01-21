@@ -202,7 +202,6 @@ static unsigned
 omap2_mcspi_txrx_pio(struct omap2_mcspi *mcspi, struct spi_transfer *xfer)
 {
 	unsigned int		count, c;
-	u32			l;
 	void __iomem		*base = mcspi->base;
 	void __iomem		*tx_reg;
 	void __iomem		*rx_reg;
@@ -246,31 +245,11 @@ omap2_mcspi_txrx_pio(struct omap2_mcspi *mcspi, struct spi_transfer *xfer)
 				dev_err(mcspi->dev, "RXS timed out\n");
 				goto out;
 			}
-
-			if (c == 0 && tx == NULL) {
-				omap2_mcspi_set_enable(mcspi, 0);
-			}
-
 			*rx++ = __raw_readl(rx_reg);
 			dev_vdbg(mcspi->dev, "read-%d %02x\n",
 					word_len, *(rx - 1));
 		}
 	} while (c);
-	/* for TX_ONLY mode, be sure all words have shifted out */
-	if (xfer->rx_buf == NULL) {
-		if (mcspi_wait_for_reg_bit(chstat_reg,
-					OMAP2_MCSPI_CHSTAT_TXS) < 0) {
-			dev_err(mcspi->dev, "TXS timed out\n");
-		} else if (mcspi_wait_for_reg_bit(chstat_reg,
-					OMAP2_MCSPI_CHSTAT_EOT) < 0)
-			dev_err(mcspi->dev, "EOT timed out\n");
-
-		/* disable chan to purge rx datas received in TX_ONLY transfer,
-		 * otherwise these rx datas will affect the direct following
-		 * RX_ONLY transfer.
-		 */
-		omap2_mcspi_set_enable(mcspi, 0);
-	}
 out:
 	omap2_mcspi_set_enable(mcspi, 1);
 	return count - c;
@@ -295,12 +274,6 @@ int omap2_mcspi_setup_transfer(struct omap2_mcspi *mcspi,
 	u32 speed_hz = 500000;
 	u8 word_len = 8; //spi->bits_per_word;
 	FUNC_ENTER();
-
-	if (t != NULL && t->bits_per_word)
-		word_len = t->bits_per_word;
-
-	if (t && t->speed_hz)
-		speed_hz = t->speed_hz;
 
 	speed_hz = min_t(u32, speed_hz, OMAP2_MCSPI_MAX_FREQ);
 	div = omap2_mcspi_calc_divisor(speed_hz);
@@ -332,69 +305,19 @@ int omap2_mcspi_setup_transfer(struct omap2_mcspi *mcspi,
 	l &= ~OMAP2_MCSPI_CHCONF_POL;
 
 	mcspi_write_chconf0(mcspi, l);
+	omap2_mcspi_force_cs(mcspi, 1);
 
 	return 0;
-}
-
-int omap2_mcspi_setup(struct omap2_mcspi *mcspi)
-{
-	FUNC_ENTER();
-}
-
-void omap2_mcspi_cleanup(struct omap2_mcspi *mcspi)
-{
-	FUNC_ENTER();
 }
 
 int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi, 
 						struct spi_transfer *t)
 {
-	int cs_active = 0;
 	int status = 0;
-	u32 chconf;
-	int actual_length = 0;
 	FUNC_ENTER();
 	
 	if (t == NULL)
 		return EINVAL;
-
-	omap2_mcspi_set_enable(mcspi, 0);
-	if (t->tx_buf == NULL && t->rx_buf == NULL && t->len) {
-		return -EINVAL;
-	}
-	/* Check if the speed is withing acceptable limit */
-	if (t->speed_hz > OMAP2_MCSPI_MAX_FREQ
-			|| (t->len && !(t->rx_buf || t->tx_buf))) {
-		dev_dbg(mcspi->dev, "Speed exceeds the max supported\n");
-		return -EINVAL;
-	}
-	if (t->speed_hz && t->speed_hz < (OMAP2_MCSPI_MAX_FREQ >> 15)) {
-		dev_dbg(mcspi->dev, "speed_hz below minimum Hz\n");
-		return -EINVAL;
-	}
-	if (t->speed_hz || t->bits_per_word) {
-		status = omap2_mcspi_setup_transfer(mcspi, t);
-		if (status < 0)
-			return status;
-	}
-#if 0
-	if (!cs_active) {
-		omap2_mcspi_force_cs(mcspi, 1);
-		cs_active = 1;
-	}
-#endif
-	omap2_mcspi_force_cs(mcspi, 1);
-
-	chconf = mcspi_cached_chconf0(mcspi);
-	chconf &= ~OMAP2_MCSPI_CHCONF_TRM_MASK;
-	chconf &= ~OMAP2_MCSPI_CHCONF_TURBO;
-
-	if (t->tx_buf == NULL)
-		chconf |= OMAP2_MCSPI_CHCONF_TRM_RX_ONLY;
-	else if (t->rx_buf == NULL)
-		chconf |= OMAP2_MCSPI_CHCONF_TRM_TX_ONLY;
-
-	mcspi_write_chconf0(mcspi, chconf);
 
 	if (t->len) {
 		unsigned	count;
@@ -406,28 +329,11 @@ int omap2_mcspi_transfer_one_message(struct omap2_mcspi *mcspi,
 			__raw_writel(0, mcspi->base
 					+ OMAP2_MCSPI_TX0);
 		count = omap2_mcspi_txrx_pio(mcspi, t);
-		actual_length += count;
 
 		if (count != t->len) {
 			return -EIO;
 		}
 	}
-#if 0
-	/* ignore the "leave it on after last xfer" hint */
-	if (t->cs_change) {
-		omap2_mcspi_force_cs(mcspi, 0);
-		cs_active = 0;
-	}
-#endif
-
-	omap2_mcspi_set_enable(mcspi, 0);
-#if 0
-	if (cs_active)
-		omap2_mcspi_force_cs(mcspi, 0);
-#endif
-
-	//omap2_mcspi_set_enable(mcspi, 0);
-
 	return status;
 }
 
