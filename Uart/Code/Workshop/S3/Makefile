@@ -17,7 +17,7 @@ else
 	#src-mod := $(notdir $(wildcard ${SUBDIRS}/*.mod.c))
 	#src-m := $(filter-out ${src-mod}, ${src-m})
 	#obj-m := $(src-m:.c=.o)
-	obj-m := serial.o serial-irq.o omap-serial.o tiny_serial.o
+	obj-m := serial.o serial-irq.o omap-serial.o
         serial-y := final_char_driver.o char-serial-new.o
         #oserial-y := final_char_driver.o char-serial.o
 

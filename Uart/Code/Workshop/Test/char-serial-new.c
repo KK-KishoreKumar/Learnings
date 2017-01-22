@@ -165,11 +165,6 @@ int serial_read(struct uart_omap_port *up, size_t len)
 static void serial_omap_rdi(struct uart_omap_port *up, unsigned int lsr)
 {
 	FUNC_ENTER();
-
-	if (!(lsr & UART_LSR_DR))
-		return;
-	ch = serial_in(up, UART_RX);
-	count = 1;
 }
 
 /**
@@ -195,13 +190,6 @@ static irqreturn_t serial_omap_irq(int irq, void *dev_id)
 	/* extract IRQ type from IIR register */
 	type = iir & 0x3e;
 	printk("Interrupt Type = %x\n", type);
-	//printk("iir = %x\n", iir);
-	if (type == UART_IIR_RDI) {
-		serial_omap_rdi(up, lsr);
-		ret = IRQ_HANDLED;
-	}
-	if (type == UART_IIR_RLSI)
-	 	serial_omap_rlsi(up, lsr);
 	spin_unlock(&up->port.lock);
 	return ret;
 }
