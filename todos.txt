@@ -2,3 +2,29 @@ How to use the memory bariers in optimized way?
 How is PCI addresss (Physically IO) lines used?
 When do we use GFP_USER used?
 
+HW required for Workshops
+-------------------------
+1. LDR - LM358P (op-amp), LDR (p229)
+2. HS-422 Servo Motor for PWM
+3. 74HC595 (Shift Register) + LED's - P296
+4. ADXL345 SPI/I2C - P303
+5. Interfacing Motors - p326
+6. Character LCD, SSD - P354 HD44780 LCD (P360)
+7. Audio:
+  + http://www.hotmcu.com/wiki/Beagleong_Black_LCD_Display_with_Stereo_Audio_Cape (Audio and LCD cape for BBB)
+  + http://www.aerodynes.fr/2014/06/04/beaglebone-black-audio-cape/ (Interfacing with TLV320AIC3104)
+  + http://www.hotmcu.com/beagleong-black-lcd-display-stereo-audio-cape-p-129.html
+  + http://www.haoyuelectronics.com/service/BBB-LCD-Audio-Exif/
+  + http://elinux.org/BBB_Audio_Cape_RevB_Getting_Started (Using the HDMI)
+  + http://andicelabs.com/2014/03/usb-audio-beaglebone/ (Using the audio devices)
+  + http://processors.wiki.ti.com/index.php/Sitara_Linux_Audio_BeagleBoneBlack_HDMI
+  + http://www.aerodynes.fr/2014/06/04/beaglebone-black-audio-cape/
+  + http://elinux.org/CircuitCo:Audio_Cape_RevB (For Interfacing TLV320AIC3104) 
+  + twl6040 codec (OMAP5)
+  + http://processors.wiki.ti.com/index.php/Linux_Core_Audio_User%27s_Guide#AM335x_EVM (Lots of Info on Audio with Ti Boards)
+  + http://processors.wiki.ti.com/index.php/Processor_SDK_Linux_Audio (Various Links for Audio on TI Boards)
+  + https://e2e.ti.com/support/arm/sitara_arm/f/791/p/439114/1574427
+  + AD1938 Codec (http://www.creative-technologies.de/wp-content/uploads/2016/02/Linuxbasiertes_Mehrkanal-Audiosystem_mit_niedriger_Latenz.pdf)
+  + http://www.creative-technologies.de/linux-based-low-latency-multichannel-audio-system-2/
+  + https://hackaday.io/project/9634-linux-based-low-latency-multichannel-audio-system
+  + https://ez.analog.com/thread/85695 (ADAU1761 codec)
