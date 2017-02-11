@@ -1,0 +1,6 @@
+1. Char interface is being provided by i2c_char.c. Compilation generates the file i2c.ko.
+Test/test  - Hands-on for testing the character on the I2c driver. The intention is to get the XRDY/ARDY status after transmission
++ Enhance the previous program to send the multiple characters on the I2C line.
++ Enhance the program further to support the read/write transactions.
++ Enhance the program to support the interrupts
++ Dummy client driver for I2c transactions on the adapter. 
